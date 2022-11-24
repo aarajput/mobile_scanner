@@ -23,7 +23,7 @@ class MobileScanner extends StatefulWidget {
   ///
   /// [barcode] The barcode object with all information about the scanned code.
   /// [startInternalArguments] Information about the state of the MobileScanner widget
-  final MobileScannerCallback onDetect;
+  final MobileScannerCallback? onDetect;
 
   /// Function that gets called when the scanner is started.
   ///
@@ -40,7 +40,7 @@ class MobileScanner extends StatefulWidget {
   /// Create a [MobileScanner] with a [controller], the [controller] must has been initialized.
   const MobileScanner({
     super.key,
-    required this.onDetect,
+    this.onDetect,
     this.onStart,
     this.controller,
     this.autoResume = true,
@@ -108,7 +108,7 @@ class _MobileScannerState extends State<MobileScanner>
           return const ColoredBox(color: Colors.black);
         } else {
           controller.barcodes.listen((barcode) {
-            widget.onDetect(barcode);
+            widget.onDetect?.call(barcode);
           });
           return ClipRect(
             child: SizedBox(
@@ -121,7 +121,9 @@ class _MobileScannerState extends State<MobileScanner>
                   height: value.size.height,
                   child: kIsWeb
                       ? HtmlElementView(viewType: value.webId!)
-                      : Texture(textureId: value.textureId!),
+                      : Texture(
+                          textureId: value.textureId!,
+                        ),
                 ),
               ),
             ),
