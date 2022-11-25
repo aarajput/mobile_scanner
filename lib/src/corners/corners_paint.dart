@@ -19,9 +19,14 @@ class CornersPaint extends StatelessWidget {
         if (!snapshot.hasData) {
           return child;
         }
-        return CustomPaint(
-          foregroundPainter: CornersPainter(snapshot.data!),
-          child: child,
+        return GestureDetector(
+          onTapDown: (event) {
+            print('event: $event');
+          },
+          child: CustomPaint(
+            foregroundPainter: CornersPainter(snapshot.data!),
+            child: child,
+          ),
         );
       },
     );
@@ -34,34 +39,33 @@ class CornersPainter extends CustomPainter {
 
   CornersPainter(this.barcodeCapture)
       : redPaint = Paint()
-          ..color = Colors.red
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 10;
+    ..color = Colors.red
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 10;
 
   @override
   void paint(Canvas canvas, Size size) {
     final path = Path()
       ..moveTo(0, 0)
-      ..lineTo(size.width, 0)
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..lineTo(0, 0);
+      ..lineTo(size.width, 0)..lineTo(size.width, size.height)..lineTo(
+          0, size.height)..lineTo(0, 0);
 
     canvas.drawPath(path, redPaint);
     final imageSize = barcodeCapture.imageSize;
-    final widthFactor = imageSize == null ? 1 : size.height / imageSize.height;
-    final heightFactor = imageSize == null ? 1 : size.width / imageSize.width;
+    final widthFactor = imageSize == null ? 1 : size.width / imageSize.width;
+    final heightFactor = imageSize == null ? 1 : size.height / imageSize.height;
     final barcodes = barcodeCapture.barcodes;
     for (int i = 0; i < barcodes.length; i++) {
       final corners = barcodes[i].corners;
       if (corners != null && corners.length == 4) {
-        print('corner_0: ${corners[0]}');
         final path = Path()
-          ..moveTo(corners[0].dy * widthFactor, corners[0].dx * heightFactor)
-          ..lineTo(corners[1].dy * widthFactor, corners[1].dx * heightFactor)
-          ..lineTo(corners[2].dy * widthFactor, corners[2].dx * heightFactor)
-          ..lineTo(corners[3].dy * widthFactor, corners[3].dx * heightFactor)
-          ..lineTo(corners[0].dy * widthFactor, corners[0].dx * heightFactor);
+          ..moveTo(
+              corners[0].dx * widthFactor - 3.5, corners[0].dy * heightFactor)
+          ..lineTo(corners[1].dx * widthFactor,
+              corners[1].dy * heightFactor)..lineTo(corners[2].dx * widthFactor,
+              corners[2].dy * heightFactor)..lineTo(corners[3].dx * widthFactor,
+              corners[3].dy * heightFactor)..lineTo(
+              corners[0].dx * widthFactor, corners[0].dy * heightFactor - 3.5);
         canvas.drawPath(path, redPaint);
       }
     }
