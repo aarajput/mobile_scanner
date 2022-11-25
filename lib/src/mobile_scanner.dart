@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/src/corners/corners_paint.dart';
 import 'package:mobile_scanner/src/mobile_scanner_controller.dart';
 import 'package:mobile_scanner/src/objects/barcode_capture.dart';
 import 'package:mobile_scanner/src/objects/mobile_scanner_arguments.dart';
@@ -121,8 +122,11 @@ class _MobileScannerState extends State<MobileScanner>
                   height: value.size.height,
                   child: kIsWeb
                       ? HtmlElementView(viewType: value.webId!)
-                      : Texture(
-                          textureId: value.textureId!,
+                      : CornersPaint(
+                          barcodeCapture: controller.barcodes,
+                          child: Texture(
+                            textureId: value.textureId!,
+                          ),
                         ),
                 ),
               ),

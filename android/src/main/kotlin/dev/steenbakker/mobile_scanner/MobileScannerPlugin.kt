@@ -1,6 +1,7 @@
 package dev.steenbakker.mobile_scanner
 
 import android.net.Uri
+import android.util.Size
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
@@ -31,20 +32,33 @@ class MobileScannerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCa
         permissionResult = null
     }
 
-    private val callback: MobileScannerCallback = { barcodes: List<Map<String, Any?>>, image: ByteArray? ->
-        if (image != null) {
-            barcodeHandler.publishEvent(mapOf(
-                "name" to "barcode",
-                "data" to barcodes,
-                "image" to image
-            ))
-        } else {
-            barcodeHandler.publishEvent(mapOf(
-                "name" to "barcode",
-                "data" to barcodes
-            ))
+    private val callback: MobileScannerCallback =
+        { barcodes: List<Map<String, Any?>>, imageSize: Size, image: ByteArray? ->
+            if (image != null) {
+                barcodeHandler.publishEvent(
+                    mapOf(
+                        "name" to "barcode",
+                        "data" to barcodes,
+                        "image" to image,
+                        "imageSize" to mapOf(
+                            "width" to imageSize.width,
+                            "height" to imageSize.height,
+                        ),
+                    )
+                )
+            } else {
+                barcodeHandler.publishEvent(
+                    mapOf(
+                        "name" to "barcode",
+                        "data" to barcodes,
+                        "imageSize" to mapOf(
+                            "width" to imageSize.width,
+                            "height" to imageSize.height,
+                        ),
+                    )
+                )
+            }
         }
-    }
 
     private val analyzerCallback: AnalyzerCallback = { barcodes: List<Map<String, Any?>>?->
         if (barcodes != null) {

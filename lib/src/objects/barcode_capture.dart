@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:ui';
 
 import 'package:mobile_scanner/src/objects/barcode.dart';
 
@@ -12,8 +13,11 @@ class BarcodeCapture {
 
   final Uint8List? image;
 
+  final Size? imageSize;
+
   BarcodeCapture({
     required this.barcodes,
+    required this.imageSize,
     this.image,
   });
 }

@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.util.Size
 import android.view.Surface
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -21,7 +22,7 @@ import io.flutter.plugin.common.PluginRegistry
 import io.flutter.view.TextureRegistry
 
 typealias PermissionCallback = (permissionGranted: Boolean) -> Unit
-typealias MobileScannerCallback = (barcodes: List<Map<String, Any?>>, image: ByteArray?) -> Unit
+typealias MobileScannerCallback = (barcodes: List<Map<String, Any?>>, imageSize: Size, image: ByteArray?) -> Unit
 typealias AnalyzerCallback = (barcodes: List<Map<String, Any?>>?) -> Unit
 typealias MobileScannerErrorCallback = (error: String) -> Unit
 typealias TorchStateCallback = (state: Int) -> Unit
@@ -143,6 +144,7 @@ class MobileScanner(
                 if (barcodeMap.isNotEmpty()) {
                     mobileScannerCallback(
                         barcodeMap,
+                        Size(inputImage.width, inputImage.height),
                         if (returnImage) mediaImage.toByteArray() else null
                     )
                 }
@@ -295,7 +297,6 @@ class MobileScanner(
      */
     fun analyzeImage(image: Uri, analyzerCallback: AnalyzerCallback) {
         val inputImage = InputImage.fromFilePath(activity, image)
-
         scanner.process(inputImage)
             .addOnSuccessListener { barcodes ->
                 val barcodeMap = barcodes.map { barcode -> barcode.data }

@@ -67,6 +67,7 @@ class MobileScannerController {
   /// Sets the barcode stream
   final StreamController<BarcodeCapture> _barcodesController =
       StreamController.broadcast();
+
   Stream<BarcodeCapture> get barcodes => _barcodesController.stream;
 
   static const MethodChannel _methodChannel =
@@ -266,7 +267,13 @@ class MobileScannerController {
   void _handleEvent(Map event) {
     final name = event['name'];
     final data = event['data'];
-
+    final mapImageSize = event['imageSize'] as Map<Object?, Object?>?;
+    final imageSize = mapImageSize == null
+        ? null
+        : Size(
+            (mapImageSize['width']! as int).toDouble(),
+            (mapImageSize['height']! as int).toDouble(),
+          );
     switch (name) {
       case 'torchState':
         final state = TorchState.values[data as int? ?? 0];
@@ -280,6 +287,7 @@ class MobileScannerController {
         _barcodesController.add(
           BarcodeCapture(
             barcodes: parsed,
+            imageSize: imageSize,
             image: event['image'] as Uint8List?,
           ),
         );
@@ -292,6 +300,7 @@ class MobileScannerController {
                 rawValue: (data as Map)['payload'] as String?,
               )
             ],
+            imageSize: imageSize,
           ),
         );
         break;
@@ -303,6 +312,7 @@ class MobileScannerController {
                 rawValue: data as String?,
               )
             ],
+            imageSize: imageSize,
           ),
         );
         break;
