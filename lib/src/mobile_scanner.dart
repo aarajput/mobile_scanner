@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/src/corners/corners_paint.dart';
 import 'package:mobile_scanner/src/mobile_scanner_controller.dart';
 import 'package:mobile_scanner/src/objects/barcode_capture.dart';
+import 'package:mobile_scanner/src/objects/barcode_rect.dart';
 import 'package:mobile_scanner/src/objects/mobile_scanner_arguments.dart';
 
 typedef MobileScannerCallback = void Function(BarcodeCapture barcodes);
@@ -38,6 +39,8 @@ class MobileScanner extends StatefulWidget {
   /// Whether to automatically resume the camera when the application is resumed
   final bool autoResume;
 
+  final BarcodeRect? barcodeRect;
+
   /// Create a [MobileScanner] with a [controller], the [controller] must has been initialized.
   const MobileScanner({
     super.key,
@@ -46,6 +49,7 @@ class MobileScanner extends StatefulWidget {
     this.controller,
     this.autoResume = true,
     this.fit = BoxFit.cover,
+    this.barcodeRect,
     @Deprecated('Use the [onPermissionSet] paremeter in the [MobileScannerController] instead.')
         this.onPermissionSet,
   });
@@ -124,6 +128,8 @@ class _MobileScannerState extends State<MobileScanner>
                       ? HtmlElementView(viewType: value.webId!)
                       : CornersPaint(
                           barcodeCapture: controller.barcodes,
+                          barcodeRect: widget.barcodeRect,
+                          previewSize: value.size,
                           child: Texture(
                             textureId: value.textureId!,
                           ),

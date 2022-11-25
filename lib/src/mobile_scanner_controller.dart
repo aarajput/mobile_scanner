@@ -271,8 +271,8 @@ class MobileScannerController {
     final imageSize = mapImageSize == null
         ? null
         : Size(
-            (mapImageSize['width']! as int).toDouble(),
-            (mapImageSize['height']! as int).toDouble(),
+            mapImageSize['width']! as double,
+            mapImageSize['height']! as double,
           );
     switch (name) {
       case 'torchState':

@@ -143,13 +143,14 @@ class MobileScanner(
 
                 val portrait = inputImage.rotationDegrees % 180 == 0
 
-                if (barcodeMap.isNotEmpty()) {
-                    mobileScannerCallback(
-                        barcodeMap,
-                        if(portrait) Size(inputImage.width, inputImage.height) else Size(inputImage.height, inputImage.width),
-                        if (returnImage) mediaImage.toByteArray() else null
-                    )
-                }
+                mobileScannerCallback(
+                    barcodeMap,
+                    if (portrait) Size(
+                        inputImage.width,
+                        inputImage.height
+                    ) else Size(inputImage.height, inputImage.width),
+                    if (returnImage) mediaImage.toByteArray() else null
+                )
             }
             .addOnFailureListener { e ->
                 mobileScannerErrorCallback(

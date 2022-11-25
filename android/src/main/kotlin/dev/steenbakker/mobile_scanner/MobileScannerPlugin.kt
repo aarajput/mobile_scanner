@@ -27,7 +27,7 @@ class MobileScannerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCa
     private var permissionResult: MethodChannel.Result? = null
     private var analyzerResult: MethodChannel.Result? = null
 
-    private val permissionCallback: PermissionCallback = {hasPermission: Boolean ->
+    private val permissionCallback: PermissionCallback = { hasPermission: Boolean ->
         permissionResult?.success(hasPermission)
         permissionResult = null
     }
@@ -41,8 +41,8 @@ class MobileScannerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCa
                         "data" to barcodes,
                         "image" to image,
                         "imageSize" to mapOf(
-                            "width" to imageSize.width,
-                            "height" to imageSize.height,
+                            "width" to imageSize.width.toFloat(),
+                            "height" to imageSize.height.toFloat(),
                         ),
                     )
                 )
@@ -60,12 +60,14 @@ class MobileScannerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCa
             }
         }
 
-    private val analyzerCallback: AnalyzerCallback = { barcodes: List<Map<String, Any?>>?->
+    private val analyzerCallback: AnalyzerCallback = { barcodes: List<Map<String, Any?>>? ->
         if (barcodes != null) {
-            barcodeHandler.publishEvent(mapOf(
-                "name" to "barcode",
-                "data" to barcodes
-            ))
+            barcodeHandler.publishEvent(
+                mapOf(
+                    "name" to "barcode",
+                    "data" to barcodes
+                )
+            )
             analyzerResult?.success(true)
         } else {
             analyzerResult?.success(false)
@@ -73,14 +75,16 @@ class MobileScannerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCa
         analyzerResult = null
     }
 
-    private val errorCallback: MobileScannerErrorCallback = {error: String ->
-        barcodeHandler.publishEvent(mapOf(
-            "name" to "error",
-            "data" to error,
-        ))
+    private val errorCallback: MobileScannerErrorCallback = { error: String ->
+        barcodeHandler.publishEvent(
+            mapOf(
+                "name" to "error",
+                "data" to error,
+            )
+        )
     }
 
-    private val torchStateCallback: TorchStateCallback = {state: Int ->
+    private val torchStateCallback: TorchStateCallback = { state: Int ->
         barcodeHandler.publishEvent(mapOf("name" to "torchState", "data" to state))
     }
 
@@ -102,7 +106,8 @@ class MobileScannerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCa
     }
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        method = MethodChannel(binding.binaryMessenger, "dev.steenbakker.mobile_scanner/scanner/method")
+        method =
+            MethodChannel(binding.binaryMessenger, "dev.steenbakker.mobile_scanner/scanner/method")
         method!!.setMethodCallHandler(this)
 
         barcodeHandler = BarcodeHandler(binding)
@@ -115,7 +120,11 @@ class MobileScannerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCa
     }
 
     override fun onAttachedToActivity(activityPluginBinding: ActivityPluginBinding) {
-        handler = MobileScanner(activityPluginBinding.activity, flutterPluginBinding!!.textureRegistry, callback, errorCallback
+        handler = MobileScanner(
+            activityPluginBinding.activity,
+            flutterPluginBinding!!.textureRegistry,
+            callback,
+            errorCallback
         )
         activityPluginBinding.addRequestPermissionsResultListener(handler!!)
 
@@ -172,22 +181,32 @@ class MobileScannerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCa
         val position =
             if (facing == 0) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
 
-        val detectionSpeed: DetectionSpeed = DetectionSpeed.values().first { it.intValue == speed}
+        val detectionSpeed: DetectionSpeed = DetectionSpeed.values().first { it.intValue == speed }
 
         try {
-            handler!!.start(barcodeScannerOptions, returnImage, position, torch, detectionSpeed, torchStateCallback, mobileScannerStartedCallback = {
-                result.success(mapOf(
-                    "textureId" to it.id,
-                    "size" to mapOf("width" to it.width, "height" to it.height),
-                    "torchable" to it.hasFlashUnit
-                ))
-            },
-                timeout.toLong())
+            handler!!.start(
+                barcodeScannerOptions,
+                returnImage,
+                position,
+                torch,
+                detectionSpeed,
+                torchStateCallback,
+                mobileScannerStartedCallback = {
+                    result.success(
+                        mapOf(
+                            "textureId" to it.id,
+                            "size" to mapOf("width" to it.width, "height" to it.height),
+                            "torchable" to it.hasFlashUnit
+                        )
+                    )
+                },
+                timeout.toLong()
+            )
 
         } catch (e: AlreadyStarted) {
             result.error(
                 "MobileScanner",
-            "Called start() while already started",
+                "Called start() while already started",
                 null
             )
         } catch (e: NoCamera) {
