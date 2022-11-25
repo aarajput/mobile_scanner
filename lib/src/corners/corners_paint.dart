@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-class CornersPaint extends StatelessWidget {
+class CornersPaint extends StatefulWidget {
   final Stream<BarcodeCapture> barcodeCapture;
   final BarcodeRect? barcodeRect;
   final Widget child;
@@ -16,29 +16,43 @@ class CornersPaint extends StatelessWidget {
   });
 
   @override
+  State<CornersPaint> createState() => _CornersPaintState();
+}
+
+class _CornersPaintState extends State<CornersPaint> {
+  List<Barcode>? lastBarcodes;
+  List<Barcode>? lastSelectedBarcodes;
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<BarcodeCapture>(
-      stream: barcodeCapture,
+      stream: widget.barcodeCapture,
       builder: (_, snapshot) {
         final barcodeCapture = snapshot.data;
         if (barcodeCapture == null ||
             barcodeCapture.imageSize == null ||
-            barcodeRect == null) {
-          return child;
+            widget.barcodeRect == null) {
+          return widget.child;
         }
+        if (lastSelectedBarcodes == null ||
+            lastBarcodes != barcodeCapture.barcodes) {
+          lastSelectedBarcodes =
+              widget.barcodeRect!.selectedBarcodes(barcodeCapture.barcodes);
+        }
+        lastBarcodes = barcodeCapture.barcodes;
         final barcodeRects = barcodeCapture.barcodes
             .where((bc) => bc.rawValue != null && bc.corners != null)
             .map(
               (bc) => _BarcodeRect(
                 barcode: bc,
-                color: barcodeRect!.selectedBarcodes.contains(bc.rawValue ?? '')
-                    ? barcodeRect!.selectedRectColor ?? Colors.green
+                color: lastSelectedBarcodes!.contains(bc)
+                    ? widget.barcodeRect!.selectedRectColor ?? Colors.green
                     : Colors.red,
                 corners: bc.corners!.map((corner) {
-                  final widthFactor =
-                      previewSize.width / barcodeCapture.imageSize!.width;
-                  final heightFactor =
-                      previewSize.height / barcodeCapture.imageSize!.height;
+                  final widthFactor = widget.previewSize.width /
+                      barcodeCapture.imageSize!.width;
+                  final heightFactor = widget.previewSize.height /
+                      barcodeCapture.imageSize!.height;
                   return Offset(
                     corner.dx * widthFactor,
                     corner.dy * heightFactor,
@@ -48,7 +62,7 @@ class CornersPaint extends StatelessWidget {
             )
             .toList();
         return GestureDetector(
-          onTapDown: barcodeRect!.onRectTap == null
+          onTapDown: widget.barcodeRect!.onRectTap == null
               ? null
               : (event) {
                   final tappedBarcodes = barcodeRects.where(
@@ -85,7 +99,8 @@ class CornersPaint extends StatelessWidget {
                     },
                   ).toList();
                   if (tappedBarcodes.isNotEmpty) {
-                    barcodeRect!.onRectTap!.call(tappedBarcodes.first.barcode);
+                    widget.barcodeRect!.onRectTap!
+                        .call(tappedBarcodes.first.barcode);
                   }
                 },
           child: CustomPaint(
@@ -93,7 +108,7 @@ class CornersPaint extends StatelessWidget {
               imageSize: barcodeCapture.imageSize!,
               barcodeRects: barcodeRects,
             ),
-            child: child,
+            child: widget.child,
           ),
         );
       },
