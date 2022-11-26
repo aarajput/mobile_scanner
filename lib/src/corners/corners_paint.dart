@@ -36,8 +36,8 @@ class _CornersPaintState extends State<CornersPaint> {
         }
         if (lastSelectedBarcodes == null ||
             lastBarcodes != barcodeCapture.barcodes) {
-          lastSelectedBarcodes =
-              widget.barcodeRect!.selectedBarcodes(barcodeCapture.barcodes);
+          lastSelectedBarcodes = widget.barcodeRect!.selectedBarcodes
+              ?.call(barcodeCapture.barcodes);
         }
         lastBarcodes = barcodeCapture.barcodes;
         final barcodeRects = barcodeCapture.barcodes
@@ -45,7 +45,7 @@ class _CornersPaintState extends State<CornersPaint> {
             .map(
               (bc) => _BarcodeRect(
                 barcode: bc,
-                color: lastSelectedBarcodes!.contains(bc)
+                color: lastSelectedBarcodes?.contains(bc) == true
                     ? widget.barcodeRect!.selectedRectColor ?? Colors.green
                     : Colors.red,
                 corners: bc.corners!.map((corner) {
