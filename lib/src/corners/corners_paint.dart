@@ -20,9 +20,6 @@ class CornersPaint extends StatefulWidget {
 }
 
 class _CornersPaintState extends State<CornersPaint> {
-  List<Barcode>? lastBarcodes;
-  List<Barcode>? lastSelectedBarcodes;
-
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<BarcodeCapture>(
@@ -34,18 +31,14 @@ class _CornersPaintState extends State<CornersPaint> {
             widget.barcodeRect == null) {
           return widget.child;
         }
-        if (lastSelectedBarcodes == null ||
-            lastBarcodes != barcodeCapture.barcodes) {
-          lastSelectedBarcodes = widget.barcodeRect!.selectedBarcodes
-              ?.call(barcodeCapture.barcodes);
-        }
-        lastBarcodes = barcodeCapture.barcodes;
+        final selectedBarcodes =
+            widget.barcodeRect!.selectedBarcodes?.call(barcodeCapture.barcodes);
         final barcodeRects = barcodeCapture.barcodes
             .where((bc) => bc.rawValue != null && bc.corners != null)
             .map(
               (bc) => _BarcodeRect(
                 barcode: bc,
-                color: lastSelectedBarcodes?.contains(bc) == true
+                color: selectedBarcodes?.contains(bc) == true
                     ? widget.barcodeRect!.selectedRectColor ?? Colors.green
                     : Colors.red,
                 corners: bc.corners!.map((corner) {
