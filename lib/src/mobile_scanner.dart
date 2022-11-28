@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/src/corners/corners_paint.dart';
@@ -5,6 +7,7 @@ import 'package:mobile_scanner/src/mobile_scanner_controller.dart';
 import 'package:mobile_scanner/src/objects/barcode_capture.dart';
 import 'package:mobile_scanner/src/objects/barcode_rect.dart';
 import 'package:mobile_scanner/src/objects/mobile_scanner_arguments.dart';
+import 'package:native_device_orientation/native_device_orientation.dart';
 
 typedef MobileScannerCallback = void Function(BarcodeCapture barcodes);
 typedef MobileScannerArgumentsCallback = void Function(
@@ -126,13 +129,44 @@ class _MobileScannerState extends State<MobileScanner>
                   height: value.size.height,
                   child: kIsWeb
                       ? HtmlElementView(viewType: value.webId!)
-                      : CornersPaint(
-                          barcodeCapture: controller.barcodes,
-                          barcodeRect: widget.barcodeRect,
-                          previewSize: value.size,
-                          child: Texture(
-                            textureId: value.textureId!,
-                          ),
+                      : StreamBuilder<NativeDeviceOrientation>(
+                          stream: NativeDeviceOrientationCommunicator()
+                              .onOrientationChanged(),
+                          builder: (_, snapshot) {
+                            final v = value as MobileScannerArguments?;
+                            final orientation = snapshot.data;
+                            if (v == null || orientation == null) {
+                              return const ColoredBox(color: Colors.black);
+                            }
+                            return Transform.rotate(
+                              angle: () {
+                                    switch (orientation) {
+                                      case NativeDeviceOrientation.portraitUp:
+                                        return 0;
+                                      case NativeDeviceOrientation.portraitDown:
+                                        return 180;
+                                      case NativeDeviceOrientation
+                                          .landscapeLeft:
+                                        return -90;
+                                      case NativeDeviceOrientation
+                                          .landscapeRight:
+                                        return 90;
+                                      case NativeDeviceOrientation.unknown:
+                                        return 0;
+                                    }
+                                  }() *
+                                  math.pi /
+                                  180,
+                              child: CornersPaint(
+                                barcodeCapture: controller.barcodes,
+                                barcodeRect: widget.barcodeRect,
+                                previewSize: v.size,
+                                child: Texture(
+                                  textureId: v.textureId!,
+                                ),
+                              ),
+                            );
+                          },
                         ),
                 ),
               ),

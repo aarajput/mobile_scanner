@@ -119,7 +119,7 @@ class MobileScanner(
     @ExperimentalGetImage
     val captureOutput = ImageAnalysis.Analyzer { imageProxy -> // YUV_420_888 format
         val mediaImage = imageProxy.image ?: return@Analyzer
-        val inputImage = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+        val inputImage = InputImage.fromMediaImage(mediaImage, 90)
 
         if (detectionSpeed == DetectionSpeed.NORMAL && scannerTimeout) {
             imageProxy.close()
@@ -141,16 +141,20 @@ class MobileScanner(
 
                 val barcodeMap = barcodes.map { barcode -> barcode.data }
 
-                val portrait = inputImage.rotationDegrees % 180 == 0
-
-                mobileScannerCallback(
-                    barcodeMap,
-                    if (portrait) Size(
-                        inputImage.width,
-                        inputImage.height
-                    ) else Size(inputImage.height, inputImage.width),
-                    if (returnImage) mediaImage.toByteArray() else null
-                )
+                if (camera != null) {
+                    val portrait = camera!!.cameraInfo.sensorRotationDegrees % 180 == 0
+                    mobileScannerCallback(
+                        barcodeMap,
+                        if (portrait) Size(
+                            inputImage.width,
+                            inputImage.height
+                        ) else Size(
+                            inputImage.height,
+                            inputImage.width
+                        ),
+                        if (returnImage) mediaImage.toByteArray() else null
+                    )
+                }
             }
             .addOnFailureListener { e ->
                 mobileScannerErrorCallback(
