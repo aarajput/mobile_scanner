@@ -1,32 +1,31 @@
 package dev.steenbakker.mobile_scanner
 
-import android.Manifest
 import android.app.Activity
-import android.content.pm.PackageManager
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import android.util.Size
 import android.view.Surface
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import dev.steenbakker.mobile_scanner.objects.DetectionSpeed
 import dev.steenbakker.mobile_scanner.objects.MobileScannerStartParameters
-import io.flutter.plugin.common.PluginRegistry
 import io.flutter.view.TextureRegistry
+import kotlin.math.roundToInt
 
-typealias PermissionCallback = (permissionGranted: Boolean) -> Unit
-typealias MobileScannerCallback = (barcodes: List<Map<String, Any?>>, imageSize: Size, image: ByteArray?) -> Unit
+
+typealias MobileScannerCallback = (barcodes: List<Map<String, Any?>>, image: ByteArray?, width: Int?, height: Int?) -> Unit
 typealias AnalyzerCallback = (barcodes: List<Map<String, Any?>>?) -> Unit
 typealias MobileScannerErrorCallback = (error: String) -> Unit
 typealias TorchStateCallback = (state: Int) -> Unit
 typealias MobileScannerStartedCallback = (parameters: MobileScannerStartParameters) -> Unit
+
 
 class NoCamera : Exception()
 class AlreadyStarted : Exception()
@@ -34,28 +33,21 @@ class AlreadyStopped : Exception()
 class TorchError : Exception()
 class CameraError : Exception()
 class TorchWhenStopped : Exception()
+class ZoomWhenStopped : Exception()
+class ZoomNotInRange : Exception()
 
 class MobileScanner(
     private val activity: Activity,
     private val textureRegistry: TextureRegistry,
     private val mobileScannerCallback: MobileScannerCallback,
     private val mobileScannerErrorCallback: MobileScannerErrorCallback
-) :
-    PluginRegistry.RequestPermissionsResultListener {
-    companion object {
-        /**
-         * When the application's activity is [androidx.fragment.app.FragmentActivity], requestCode can only use the lower 16 bits.
-         * @see androidx.fragment.app.FragmentActivity.validateRequestPermissionsRequestCode
-         */
-        private const val REQUEST_CODE = 0x0786
-    }
-
-    private var listener: PluginRegistry.RequestPermissionsResultListener? = null
+) {
 
     private var cameraProvider: ProcessCameraProvider? = null
     private var camera: Camera? = null
     private var preview: Preview? = null
     private var textureEntry: TextureRegistry.SurfaceTextureEntry? = null
+    var scanWindow: List<Float>? = null
 
     private var detectionSpeed: DetectionSpeed = DetectionSpeed.NO_DUPLICATES
     private var detectionTimeout: Long = 250
@@ -68,58 +60,12 @@ class MobileScanner(
     private var scanner = BarcodeScanning.getClient()
 
     /**
-     * Check if we already have camera permission.
-     */
-    fun hasCameraPermission(): Int {
-        // Can't get exact denied or not_determined state without request. Just return not_determined when state isn't authorized
-        val hasPermission = ContextCompat.checkSelfPermission(
-            activity,
-            Manifest.permission.CAMERA
-        ) == PackageManager.PERMISSION_GRANTED
-
-        return if (hasPermission) {
-            1
-        } else {
-            0
-        }
-    }
-
-    /**
-     * Request camera permissions.
-     */
-    fun requestPermission(permissionCallback: PermissionCallback) {
-        listener
-            ?: PluginRegistry.RequestPermissionsResultListener { requestCode, _, grantResults ->
-                if (requestCode != REQUEST_CODE) {
-                    false
-                } else {
-                    val authorized = grantResults[0] == PackageManager.PERMISSION_GRANTED
-                    permissionCallback(authorized)
-                    true
-                }
-            }
-        val permissions = arrayOf(Manifest.permission.CAMERA)
-        ActivityCompat.requestPermissions(activity, permissions, REQUEST_CODE)
-    }
-
-    /**
-     * Calls the callback after permissions are requested.
-     */
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ): Boolean {
-        return listener?.onRequestPermissionsResult(requestCode, permissions, grantResults) ?: false
-    }
-
-    /**
      * callback for the camera. Every frame is passed through this function.
      */
     @ExperimentalGetImage
     val captureOutput = ImageAnalysis.Analyzer { imageProxy -> // YUV_420_888 format
         val mediaImage = imageProxy.image ?: return@Analyzer
-        val inputImage = InputImage.fromMediaImage(mediaImage, 90)
+        val inputImage = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
 
         if (detectionSpeed == DetectionSpeed.NORMAL && scannerTimeout) {
             imageProxy.close()
@@ -139,20 +85,27 @@ class MobileScanner(
                     lastScanned = newScannedBarcodes
                 }
 
-                val barcodeMap = barcodes.map { barcode -> barcode.data }
+                val barcodeMap: MutableList<Map<String, Any?>> = mutableListOf()
 
-                if (camera != null) {
-                    val portrait = camera!!.cameraInfo.sensorRotationDegrees % 180 == 0
+                for ( barcode in barcodes) {
+                    if(scanWindow != null) {
+                        val match = isbarCodeInScanWindow(scanWindow!!, barcode, imageProxy)
+                        if(!match) {
+                            continue
+                        } else {
+                            barcodeMap.add(barcode.data)
+                        }
+                    } else {
+                        barcodeMap.add(barcode.data)
+                    }
+                }
+
+                if (barcodeMap.isNotEmpty()) {
                     mobileScannerCallback(
                         barcodeMap,
-                        if (portrait) Size(
-                            inputImage.width,
-                            inputImage.height
-                        ) else Size(
-                            inputImage.height,
-                            inputImage.width
-                        ),
-                        if (returnImage) mediaImage.toByteArray() else null
+                        if (returnImage) mediaImage.toByteArray() else null,
+                        if (returnImage) mediaImage.width else null,
+                        if (returnImage) mediaImage.height else null
                     )
                 }
             }
@@ -169,6 +122,23 @@ class MobileScanner(
                 scannerTimeout = false
             }, detectionTimeout)
         }
+    }
+
+    // scales the scanWindow to the provided inputImage and checks if that scaled
+    // scanWindow contains the barcode
+    private fun isbarCodeInScanWindow(scanWindow: List<Float>, barcode: Barcode, inputImage: ImageProxy): Boolean {
+        val barcodeBoundingBox = barcode.boundingBox ?: return false
+
+        val imageWidth = inputImage.height
+        val imageHeight = inputImage.width
+
+        val left = (scanWindow[0] * imageWidth).roundToInt()
+        val top = (scanWindow[1] * imageHeight).roundToInt()
+        val right = (scanWindow[2] * imageWidth).roundToInt()
+        val bottom = (scanWindow[3] * imageHeight).roundToInt()
+
+        val scaledScanWindow = Rect(left, top, right, bottom)
+        return scaledScanWindow.contains(barcodeBoundingBox)
     }
 
     /**
@@ -245,15 +215,11 @@ class MobileScanner(
                 torchStateCallback(state)
             }
 
-//            val analysisSize = analysis.resolutionInfo?.resolution ?: Size(0, 0)
-//            val previewSize = preview!!.resolutionInfo?.resolution ?: Size(0, 0)
-//            Log.i("LOG", "Analyzer: $analysisSize")
-//            Log.i("LOG", "Preview: $previewSize")
 
             // Enable torch if provided
             camera!!.cameraControl.enableTorch(torch)
 
-            val resolution = preview!!.resolutionInfo!!.resolution
+            val resolution = analysis.resolutionInfo!!.resolution
             val portrait = camera!!.cameraInfo.sensorRotationDegrees % 180 == 0
             val width = resolution.width.toDouble()
             val height = resolution.height.toDouble()
@@ -304,6 +270,7 @@ class MobileScanner(
      */
     fun analyzeImage(image: Uri, analyzerCallback: AnalyzerCallback) {
         val inputImage = InputImage.fromFilePath(activity, image)
+
         scanner.process(inputImage)
             .addOnSuccessListener { barcodes ->
                 val barcodeMap = barcodes.map { barcode -> barcode.data }
@@ -319,6 +286,15 @@ class MobileScanner(
                     e.localizedMessage ?: e.toString()
                 )
             }
+    }
+
+    /**
+     * Set the zoom rate of the camera.
+     */
+    fun setScale(scale: Double) {
+        if (camera == null) throw ZoomWhenStopped()
+        if (scale > 1.0 || scale < 0) throw ZoomNotInRange()
+        camera!!.cameraControl.setLinearZoom(scale.toFloat())
     }
 
 }
