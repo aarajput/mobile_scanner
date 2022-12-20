@@ -104,8 +104,8 @@ class MobileScanner(
                     mobileScannerCallback(
                         barcodeMap,
                         if (returnImage) mediaImage.toByteArray() else null,
-                        if (returnImage) mediaImage.width else null,
-                        if (returnImage) mediaImage.height else null
+                        inputImage.height,
+                        inputImage.width
                     )
                 }
             }

@@ -38,7 +38,7 @@ public class SwiftMobileScannerPlugin: NSObject, FlutterPlugin {
     init(barcodeHandler: BarcodeHandler, registry: FlutterTextureRegistry) {
         self.mobileScanner = MobileScanner(registry: registry, mobileScannerCallback: { barcodes, error, image in
             if barcodes != nil {
-                let barcodesMap = barcodes!.compactMap { barcode in
+                let barcodesMap: [[String: Any?]] = barcodes!.compactMap { barcode in
                     if (SwiftMobileScannerPlugin.scanWindow != nil) {
                         if (SwiftMobileScannerPlugin.isBarcodeInScanWindow(barcode: barcode, imageSize: image.size)) {
                             return barcode.data
@@ -163,7 +163,7 @@ public class SwiftMobileScannerPlugin: NSObject, FlutterPlugin {
 
     /// Toggles the zoomScale
     private func setScale(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
-        var scale = call.arguments as? CGFloat
+        let scale = call.arguments as? CGFloat
         if (scale == nil) {
             result(FlutterError(code: "MobileScanner",
                                               message: "You must provide a scale when calling setScale!",

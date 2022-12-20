@@ -230,7 +230,7 @@ public class MobileScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelega
         
         do {
             try device.lockForConfiguration()
-            var maxZoomFactor = device.activeFormat.videoMaxZoomFactor
+            let maxZoomFactor = device.activeFormat.videoMaxZoomFactor
             
             var actualScale = (scale * 4) + 1
             
