@@ -26,10 +26,7 @@ class _CornersPaintState extends State<CornersPaint> {
       stream: widget.barcodeCapture,
       builder: (_, snapshot) {
         final barcodeCapture = snapshot.data;
-        if (barcodeCapture == null ||
-            barcodeCapture.width == null ||
-            barcodeCapture.height == null ||
-            widget.barcodeRect == null) {
+        if (barcodeCapture == null || widget.barcodeRect == null) {
           return widget.child;
         }
         final selectedBarcodes =
@@ -42,16 +39,7 @@ class _CornersPaintState extends State<CornersPaint> {
                 color: selectedBarcodes?.contains(bc) == true
                     ? widget.barcodeRect!.selectedRectColor ?? Colors.green
                     : Colors.red,
-                corners: bc.corners!.map((corner) {
-                  final widthFactor =
-                      widget.previewSize.width / barcodeCapture.width!;
-                  final heightFactor =
-                      widget.previewSize.height / barcodeCapture.height!;
-                  return Offset(
-                    corner.dx * widthFactor,
-                    corner.dy * heightFactor,
-                  );
-                }).toList(),
+                corners: bc.corners!,
               ),
             )
             .toList();
@@ -141,16 +129,17 @@ class CornersPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final strokeWidth = size.width / 480.0 + 3;
     for (int i = 0; i < barcodeRects.length; i++) {
       final barcodeRect = barcodeRects[i];
       final corners = barcodeRect.corners;
       final paint = Paint()
         ..color = barcodeRect.color
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 10;
+        ..strokeWidth = strokeWidth;
       final path = Path()
         ..moveTo(
-          corners[0].dx - 3.5,
+          corners[0].dx - (strokeWidth/2),
           corners[0].dy,
         )
         ..lineTo(corners[1].dx, corners[1].dy)
@@ -158,7 +147,7 @@ class CornersPainter extends CustomPainter {
         ..lineTo(corners[3].dx, corners[3].dy)
         ..lineTo(
           corners[0].dx,
-          corners[0].dy - 3.5,
+          corners[0].dy - (strokeWidth/2),
         );
       canvas.drawPath(path, paint);
     }
