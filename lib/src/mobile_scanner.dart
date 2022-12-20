@@ -1,11 +1,11 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:mobile_scanner/src/mobile_scanner_controller.dart';
-import 'package:mobile_scanner/src/mobile_scanner_exception.dart';
-import 'package:mobile_scanner/src/objects/barcode_capture.dart';
-import 'package:mobile_scanner/src/objects/mobile_scanner_arguments.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:mobile_scanner/src/corners/corners_paint.dart';
+import 'package:native_device_orientation/native_device_orientation.dart';
 
 /// The function signature for the error builder.
 typedef MobileScannerErrorBuilder = Widget Function(
@@ -34,7 +34,7 @@ class MobileScanner extends StatefulWidget {
   final BoxFit fit;
 
   /// The function that signals when new codes were detected by the [controller].
-  final void Function(BarcodeCapture barcodes) onDetect;
+  final void Function(BarcodeCapture barcodes)? onDetect;
 
   /// The function that signals when the barcode scanner is started.
   @Deprecated('Use onScannerStarted() instead.')
@@ -56,17 +56,22 @@ class MobileScanner extends StatefulWidget {
   /// [BoxFit]
   final Rect? scanWindow;
 
+  final bool autoDisposeController;
+  final BarcodeRect? barcodeRect;
+
   /// Create a new [MobileScanner] using the provided [controller]
   /// and [onBarcodeDetected] callback.
   const MobileScanner({
     this.controller,
     this.errorBuilder,
     this.fit = BoxFit.cover,
-    required this.onDetect,
+    this.onDetect,
     @Deprecated('Use onScannerStarted() instead.') this.onStart,
     this.onScannerStarted,
     this.placeholderBuilder,
     this.scanWindow,
+    this.autoDisposeController = true,
+    this.barcodeRect,
     super.key,
   });
 
@@ -253,7 +258,49 @@ class _MobileScannerState extends State<MobileScanner>
                         height: value.size.height,
                         child: kIsWeb
                             ? HtmlElementView(viewType: value.webId!)
-                            : Texture(textureId: value.textureId!),
+                            : StreamBuilder<NativeDeviceOrientation>(
+                                stream: NativeDeviceOrientationCommunicator()
+                                    .onOrientationChanged(),
+                                builder: (_, snapshot) {
+                                  final orientation = snapshot.data;
+                                  if (orientation == null) {
+                                    return const ColoredBox(
+                                      color: Colors.black,
+                                    );
+                                  }
+                                  return Transform.rotate(
+                                    angle: () {
+                                          switch (orientation) {
+                                            case NativeDeviceOrientation
+                                                .portraitUp:
+                                              return 0;
+                                            case NativeDeviceOrientation
+                                                .portraitDown:
+                                              return 180;
+                                            case NativeDeviceOrientation
+                                                .landscapeLeft:
+                                              return -90;
+                                            case NativeDeviceOrientation
+                                                .landscapeRight:
+                                              return 90;
+                                            case NativeDeviceOrientation
+                                                .unknown:
+                                              return 0;
+                                          }
+                                        }() *
+                                        math.pi /
+                                        180,
+                                    child: CornersPaint(
+                                      barcodeCapture: _controller.barcodes,
+                                      barcodeRect: widget.barcodeRect,
+                                      previewSize: value.size,
+                                      child: Texture(
+                                        textureId: value.textureId!,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                       ),
                     ),
                   );
@@ -270,7 +317,9 @@ class _MobileScannerState extends State<MobileScanner>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _barcodesSubscription?.cancel();
-    _controller.dispose();
+    if (widget.autoDisposeController) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 }

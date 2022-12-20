@@ -27,7 +27,8 @@ class _CornersPaintState extends State<CornersPaint> {
       builder: (_, snapshot) {
         final barcodeCapture = snapshot.data;
         if (barcodeCapture == null ||
-            barcodeCapture.imageSize == null ||
+            barcodeCapture.width == null ||
+            barcodeCapture.height == null ||
             widget.barcodeRect == null) {
           return widget.child;
         }
@@ -42,10 +43,10 @@ class _CornersPaintState extends State<CornersPaint> {
                     ? widget.barcodeRect!.selectedRectColor ?? Colors.green
                     : Colors.red,
                 corners: bc.corners!.map((corner) {
-                  final widthFactor = widget.previewSize.width /
-                      barcodeCapture.imageSize!.width;
-                  final heightFactor = widget.previewSize.height /
-                      barcodeCapture.imageSize!.height;
+                  final widthFactor =
+                      widget.previewSize.width / barcodeCapture.width!;
+                  final heightFactor =
+                      widget.previewSize.height / barcodeCapture.height!;
                   return Offset(
                     corner.dx * widthFactor,
                     corner.dy * heightFactor,
@@ -98,7 +99,10 @@ class _CornersPaintState extends State<CornersPaint> {
                 },
           child: CustomPaint(
             foregroundPainter: CornersPainter(
-              imageSize: barcodeCapture.imageSize!,
+              imageSize: Size(
+                barcodeCapture.width!,
+                barcodeCapture.height!,
+              ),
               barcodeRects: barcodeRects,
             ),
             child: widget.child,

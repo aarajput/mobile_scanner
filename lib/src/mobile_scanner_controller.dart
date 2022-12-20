@@ -339,13 +339,6 @@ class MobileScannerController {
   void _handleEvent(Map event) {
     final name = event['name'];
     final data = event['data'];
-    final mapImageSize = event['imageSize'] as Map<Object?, Object?>?;
-    final imageSize = mapImageSize == null
-        ? null
-        : Size(
-            mapImageSize['width']! as double,
-            mapImageSize['height']! as double,
-          );
     switch (name) {
       case 'torchState':
         final state = TorchState.values[data as int? ?? 0];
@@ -359,7 +352,6 @@ class MobileScannerController {
         _barcodesController.add(
           BarcodeCapture(
             barcodes: parsed,
-            imageSize: imageSize,
             image: event['image'] as Uint8List?,
             width: event['width'] as double?,
             height: event['height'] as double?,
@@ -374,7 +366,6 @@ class MobileScannerController {
                 rawValue: (data as Map)['payload'] as String?,
               )
             ],
-            imageSize: imageSize,
           ),
         );
         break;
@@ -390,7 +381,6 @@ class MobileScannerController {
                   format: toFormat(barcode['format'] as int),
                 ),
             ],
-            imageSize: imageSize,
           ),
         );
         break;
