@@ -87,10 +87,10 @@ class MobileScanner(
 
                 val barcodeMap: MutableList<Map<String, Any?>> = mutableListOf()
 
-                for ( barcode in barcodes) {
-                    if(scanWindow != null) {
+                for (barcode in barcodes) {
+                    if (scanWindow != null) {
                         val match = isbarCodeInScanWindow(scanWindow!!, barcode, imageProxy)
-                        if(!match) {
+                        if (!match) {
                             continue
                         } else {
                             barcodeMap.add(barcode.data)
@@ -100,14 +100,12 @@ class MobileScanner(
                     }
                 }
 
-                if (barcodeMap.isNotEmpty()) {
-                    mobileScannerCallback(
-                        barcodeMap,
-                        if (returnImage) mediaImage.toByteArray() else null,
-                        inputImage.height,
-                        inputImage.width
-                    )
-                }
+                mobileScannerCallback(
+                    barcodeMap,
+                    if (returnImage) mediaImage.toByteArray() else null,
+                    inputImage.height,
+                    inputImage.width
+                )
             }
             .addOnFailureListener { e ->
                 mobileScannerErrorCallback(
@@ -126,7 +124,11 @@ class MobileScanner(
 
     // scales the scanWindow to the provided inputImage and checks if that scaled
     // scanWindow contains the barcode
-    private fun isbarCodeInScanWindow(scanWindow: List<Float>, barcode: Barcode, inputImage: ImageProxy): Boolean {
+    private fun isbarCodeInScanWindow(
+        scanWindow: List<Float>,
+        barcode: Barcode,
+        inputImage: ImageProxy
+    ): Boolean {
         val barcodeBoundingBox = barcode.boundingBox ?: return false
 
         val imageWidth = inputImage.height
