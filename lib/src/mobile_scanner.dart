@@ -37,10 +37,6 @@ class MobileScanner extends StatefulWidget {
   final void Function(BarcodeCapture barcodes)? onDetect;
 
   /// The function that signals when the barcode scanner is started.
-  @Deprecated('Use onScannerStarted() instead.')
-  final void Function(MobileScannerArguments? arguments)? onStart;
-
-  /// The function that signals when the barcode scanner is started.
   final void Function(MobileScannerArguments? arguments)? onScannerStarted;
 
   /// The function that builds a placeholder widget when the scanner
@@ -57,6 +53,8 @@ class MobileScanner extends StatefulWidget {
   final Rect? scanWindow;
 
   final bool autoDisposeController;
+  final bool autoStart;
+  final bool autoStop;
   final BarcodeRect? barcodeRect;
 
   /// Create a new [MobileScanner] using the provided [controller]
@@ -66,11 +64,12 @@ class MobileScanner extends StatefulWidget {
     this.errorBuilder,
     this.fit = BoxFit.cover,
     this.onDetect,
-    @Deprecated('Use onScannerStarted() instead.') this.onStart,
     this.onScannerStarted,
     this.placeholderBuilder,
     this.scanWindow,
     this.autoDisposeController = true,
+    this.autoStart = true,
+    this.autoStop = true,
     this.barcodeRect,
     super.key,
   });
@@ -110,15 +109,7 @@ class _MobileScannerState extends State<MobileScanner>
 
   /// Start the given [scanner].
   void _startScanner(MobileScannerController scanner) {
-    if (!_controller.autoStart) {
-      debugPrint(
-        'mobile_scanner: not starting automatically because autoStart is set to false in the controller.',
-      );
-      return;
-    }
     scanner.start().then((arguments) {
-      // ignore: deprecated_member_use_from_same_package
-      widget.onStart?.call(arguments);
       widget.onScannerStarted?.call(arguments);
     }).catchError((error) {
       if (mounted) {
@@ -139,30 +130,23 @@ class _MobileScannerState extends State<MobileScanner>
       widget.onDetect,
     );
 
-    if (!_controller.isStarting) {
+    if (!_controller.isStarting && _controller.autoStart && widget.autoStart) {
       _startScanner(_controller);
     }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // App state changed before the controller was initialized.
-    if (_controller.isStarting) {
-      return;
-    }
-
     switch (state) {
       case AppLifecycleState.resumed:
-        _resumeFromBackground = false;
-        _startScanner(_controller);
+        if (_resumeFromBackground) {
+          _startScanner(_controller);
+        }
         break;
       case AppLifecycleState.paused:
-        _resumeFromBackground = true;
-        break;
       case AppLifecycleState.inactive:
-        if (!_resumeFromBackground) {
-          _controller.stop();
-        }
+        _resumeFromBackground = _controller.isStarting;
+        _controller.stop();
         break;
       case AppLifecycleState.detached:
         break;
@@ -319,6 +303,8 @@ class _MobileScannerState extends State<MobileScanner>
     _barcodesSubscription?.cancel();
     if (widget.autoDisposeController) {
       _controller.dispose();
+    } else if (widget.autoStop) {
+      _controller.stop();
     }
     super.dispose();
   }
