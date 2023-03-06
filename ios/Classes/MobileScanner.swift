@@ -122,10 +122,10 @@ public class MobileScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelega
         textureId = registry?.register(self)
 
         // Open the camera device
-        if #available(iOS 10.0, *) {
-            device = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInWideAngleCamera], mediaType: .video, position: cameraPosition).devices.first
+        if #available(iOS 13.0, *) {
+            device = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInTripleCamera, .builtInDualWideCamera, .builtInDualCamera, .builtInWideAngleCamera], mediaType: .video, position: cameraPosition).devices.first
         } else {
-            device = AVCaptureDevice.devices(for: .video).filter({$0.position == cameraPosition}).first
+            device = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInWideAngleCamera], mediaType: .video, position: cameraPosition).devices.first
         }
 
         if (device == nil) {
@@ -133,6 +133,17 @@ public class MobileScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelega
         }
 
         device.addObserver(self, forKeyPath: #keyPath(AVCaptureDevice.torchMode), options: .new, context: nil)
+        do {
+            try device.lockForConfiguration()
+            if device.isFocusModeSupported(focusMode: .continuousAutoFocus) {
+                device.focusMode = .continuousAutoFocus
+            }
+            if #available(iOS 15.4, *) {
+                device.automaticallyAdjustsFaceDrivenAutoFocusEnabled = false
+            }
+            device.unlockForConfiguration()
+        } catch {}
+
         captureSession.beginConfiguration()
 
         // Add device input

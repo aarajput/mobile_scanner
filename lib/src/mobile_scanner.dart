@@ -57,6 +57,12 @@ class MobileScanner extends StatefulWidget {
   final bool autoStop;
   final BarcodeRect? barcodeRect;
 
+  /// Only set this to true if you are starting another instance of mobile_scanner
+  /// right after disposing the first one, like in a PageView.
+  ///
+  /// Default: false
+  final bool startDelay;
+
   /// Create a new [MobileScanner] using the provided [controller]
   /// and [onBarcodeDetected] callback.
   const MobileScanner({
@@ -71,6 +77,7 @@ class MobileScanner extends StatefulWidget {
     this.autoStart = true,
     this.autoStop = true,
     this.barcodeRect,
+    this.startDelay = false,
     super.key,
   });
 
@@ -92,7 +99,7 @@ class _MobileScannerState extends State<MobileScanner>
 
   MobileScannerException? _startException;
 
-  Widget __buildPlaceholderOrError(BuildContext context, Widget? child) {
+  Widget _buildPlaceholderOrError(BuildContext context, Widget? child) {
     final error = _startException;
 
     if (error != null) {
@@ -109,9 +116,13 @@ class _MobileScannerState extends State<MobileScanner>
 
   /// Start the given [scanner].
   void _startScanner(MobileScannerController scanner) {
+    if (widget.startDelay) {
+      await Future.delayed(const Duration(seconds: 1, milliseconds: 500));
+    }
     scanner.start().then((arguments) {
       widget.onScannerStarted?.call(arguments);
     }).catchError((error) {
+      debugPrint('mobile_scanner: $error');
       if (mounted) {
         setState(() {
           _startException = error as MobileScannerException;
@@ -217,7 +228,7 @@ class _MobileScannerState extends State<MobileScanner>
           valueListenable: _controller.startArguments,
           builder: (context, value, child) {
             if (value == null) {
-              return __buildPlaceholderOrError(context, child);
+              return _buildPlaceholderOrError(context, child);
             }
 
             if (widget.scanWindow != null && scanWindow == null) {
@@ -227,7 +238,8 @@ class _MobileScannerState extends State<MobileScanner>
                 value.size,
                 Size(constraints.maxWidth, constraints.maxHeight),
               );
-              _controller.updateScanWindow(scanWindow!);
+
+              _controller.updateScanWindow(scanWindow);
             }
 
             return ClipRect(
@@ -299,8 +311,10 @@ class _MobileScannerState extends State<MobileScanner>
 
   @override
   void dispose() {
+    _controller.updateScanWindow(null);
     WidgetsBinding.instance.removeObserver(this);
     _barcodesSubscription?.cancel();
+    _barcodesSubscription = null;
     if (widget.autoDisposeController) {
       _controller.dispose();
     } else if (widget.autoStop) {
