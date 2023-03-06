@@ -220,6 +220,10 @@ class MobileScanner(
 
     }
 
+    fun isStarted(): Boolean {
+        return camera != null && preview != null;
+    }
+
     /**
      * Stop barcode scanning.
      */

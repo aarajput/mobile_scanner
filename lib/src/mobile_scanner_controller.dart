@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+
 // ignore: unnecessary_import
 import 'dart:typed_data';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -252,6 +254,16 @@ class MobileScannerController {
       await _methodChannel.invokeMethod('stop');
     } catch (e) {
       debugPrint('$e');
+    }
+  }
+
+  /// checks if scanner is running.
+  Future<bool> isStarted() async {
+    try {
+      return await _methodChannel.invokeMethod('isStarted') as bool;
+    } catch (e) {
+      debugPrint('$e');
+      return false;
     }
   }
 

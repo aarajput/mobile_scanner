@@ -21,14 +21,17 @@ class MobileScannerHandler(
     binaryMessenger: BinaryMessenger,
     private val permissions: MobileScannerPermissions,
     private val addPermissionListener: (RequestPermissionsResultListener) -> Unit,
-    textureRegistry: TextureRegistry): MethodChannel.MethodCallHandler {
+    textureRegistry: TextureRegistry
+) : MethodChannel.MethodCallHandler {
 
-    private val analyzerCallback: AnalyzerCallback = { barcodes: List<Map<String, Any?>>?->
+    private val analyzerCallback: AnalyzerCallback = { barcodes: List<Map<String, Any?>>? ->
         if (barcodes != null) {
-            barcodeHandler.publishEvent(mapOf(
-                "name" to "barcode",
-                "data" to barcodes
-            ))
+            barcodeHandler.publishEvent(
+                mapOf(
+                    "name" to "barcode",
+                    "data" to barcodes
+                )
+            )
             analyzerResult?.success(true)
         } else {
             analyzerResult?.success(false)
@@ -38,41 +41,50 @@ class MobileScannerHandler(
 
     private var analyzerResult: MethodChannel.Result? = null
 
-    private val callback: MobileScannerCallback = { barcodes: List<Map<String, Any?>>, image: ByteArray?, width: Int?, height: Int? ->
-        if (image != null) {
-            barcodeHandler.publishEvent(mapOf(
-                "name" to "barcode",
-                "data" to barcodes,
-                "image" to image,
-                "width" to width!!.toDouble(),
-                "height" to height!!.toDouble()
-            ))
-        } else {
-            barcodeHandler.publishEvent(mapOf(
-                "name" to "barcode",
-                "data" to barcodes
-            ))
+    private val callback: MobileScannerCallback =
+        { barcodes: List<Map<String, Any?>>, image: ByteArray?, width: Int?, height: Int? ->
+            if (image != null) {
+                barcodeHandler.publishEvent(
+                    mapOf(
+                        "name" to "barcode",
+                        "data" to barcodes,
+                        "image" to image,
+                        "width" to width!!.toDouble(),
+                        "height" to height!!.toDouble()
+                    )
+                )
+            } else {
+                barcodeHandler.publishEvent(
+                    mapOf(
+                        "name" to "barcode",
+                        "data" to barcodes
+                    )
+                )
+            }
         }
-    }
 
-    private val errorCallback: MobileScannerErrorCallback = {error: String ->
-        barcodeHandler.publishEvent(mapOf(
-            "name" to "error",
-            "data" to error,
-        ))
+    private val errorCallback: MobileScannerErrorCallback = { error: String ->
+        barcodeHandler.publishEvent(
+            mapOf(
+                "name" to "error",
+                "data" to error,
+            )
+        )
     }
 
     private var methodChannel: MethodChannel? = null
 
     private var mobileScanner: MobileScanner? = null
 
-    private val torchStateCallback: TorchStateCallback = {state: Int ->
+    private val torchStateCallback: TorchStateCallback = { state: Int ->
         barcodeHandler.publishEvent(mapOf("name" to "torchState", "data" to state))
     }
 
     init {
-        methodChannel = MethodChannel(binaryMessenger,
-            "dev.steenbakker.mobile_scanner/scanner/method")
+        methodChannel = MethodChannel(
+            binaryMessenger,
+            "dev.steenbakker.mobile_scanner/scanner/method"
+        )
         methodChannel!!.setMethodCallHandler(this)
         mobileScanner = MobileScanner(activity, textureRegistry, callback, errorCallback)
     }
@@ -84,7 +96,7 @@ class MobileScannerHandler(
 
         val listener: RequestPermissionsResultListener? = permissions.getPermissionListener()
 
-        if(listener != null) {
+        if (listener != null) {
             activityPluginBinding.removeRequestPermissionsResultListener(listener)
         }
 
@@ -101,9 +113,9 @@ class MobileScannerHandler(
             "request" -> permissions.requestPermission(
                 activity,
                 addPermissionListener,
-                object: MobileScannerPermissions.ResultCallback {
+                object : MobileScannerPermissions.ResultCallback {
                     override fun onResult(errorCode: String?, errorDescription: String?) {
-                        when(errorCode) {
+                        when (errorCode) {
                             null -> result.success(true)
                             MobileScannerPermissions.CAMERA_ACCESS_DENIED -> result.success(false)
                             else -> result.error(errorCode, errorDescription, null)
@@ -113,6 +125,7 @@ class MobileScannerHandler(
             "start" -> start(call, result)
             "torch" -> toggleTorch(call, result)
             "stop" -> stop(result)
+            "isStarted" -> isStarted(result)
             "analyzeImage" -> analyzeImage(call, result)
             "setScale" -> setScale(call, result)
             "updateScanWindow" -> updateScanWindow(call)
@@ -149,17 +162,27 @@ class MobileScannerHandler(
         val position =
             if (facing == 0) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
 
-        val detectionSpeed: DetectionSpeed = DetectionSpeed.values().first { it.intValue == speed}
+        val detectionSpeed: DetectionSpeed = DetectionSpeed.values().first { it.intValue == speed }
 
         try {
-            mobileScanner!!.start(barcodeScannerOptions, returnImage, position, torch, detectionSpeed, torchStateCallback, mobileScannerStartedCallback = {
-                result.success(mapOf(
-                    "textureId" to it.id,
-                    "size" to mapOf("width" to it.width, "height" to it.height),
-                    "torchable" to it.hasFlashUnit
-                ))
-            },
-                timeout.toLong())
+            mobileScanner!!.start(
+                barcodeScannerOptions,
+                returnImage,
+                position,
+                torch,
+                detectionSpeed,
+                torchStateCallback,
+                mobileScannerStartedCallback = {
+                    result.success(
+                        mapOf(
+                            "textureId" to it.id,
+                            "size" to mapOf("width" to it.width, "height" to it.height),
+                            "torchable" to it.hasFlashUnit
+                        )
+                    )
+                },
+                timeout.toLong()
+            )
 
         } catch (e: AlreadyStarted) {
             result.error(
@@ -201,6 +224,10 @@ class MobileScannerHandler(
         } catch (e: AlreadyStopped) {
             result.success(null)
         }
+    }
+
+    private fun isStarted(result: MethodChannel.Result) {
+        result.success(mobileScanner!!.isStarted())
     }
 
     private fun analyzeImage(call: MethodCall, result: MethodChannel.Result) {
