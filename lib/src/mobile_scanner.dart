@@ -115,20 +115,21 @@ class _MobileScannerState extends State<MobileScanner>
   }
 
   /// Start the given [scanner].
-  void _startScanner(MobileScannerController scanner) {
+  Future<void> _startScanner() async {
     if (widget.startDelay) {
       await Future.delayed(const Duration(seconds: 1, milliseconds: 500));
     }
-    scanner.start().then((arguments) {
+    try {
+      final arguments = await _controller.start();
       widget.onScannerStarted?.call(arguments);
-    }).catchError((error) {
+    } catch (error) {
       debugPrint('mobile_scanner: $error');
       if (mounted) {
         setState(() {
           _startException = error as MobileScannerException;
         });
       }
-    });
+    }
   }
 
   @override
@@ -142,7 +143,7 @@ class _MobileScannerState extends State<MobileScanner>
     );
 
     if (!_controller.isStarting && _controller.autoStart && widget.autoStart) {
-      _startScanner(_controller);
+      _startScanner();
     }
   }
 
@@ -151,7 +152,7 @@ class _MobileScannerState extends State<MobileScanner>
     switch (state) {
       case AppLifecycleState.resumed:
         if (_resumeFromBackground) {
-          _startScanner(_controller);
+          _startScanner();
         }
         break;
       case AppLifecycleState.paused:
