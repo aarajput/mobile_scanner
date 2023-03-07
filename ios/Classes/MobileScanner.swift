@@ -135,7 +135,7 @@ public class MobileScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelega
         device.addObserver(self, forKeyPath: #keyPath(AVCaptureDevice.torchMode), options: .new, context: nil)
         do {
             try device.lockForConfiguration()
-            if device.isFocusModeSupported(focusMode: .continuousAutoFocus) {
+            if device.isFocusModeSupported(.continuousAutoFocus) {
                 device.focusMode = .continuousAutoFocus
             }
             if #available(iOS 15.4, *) {
@@ -203,6 +203,10 @@ public class MobileScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelega
         textureId = nil
         captureSession = nil
         device = nil
+    }
+
+    func isStarted() -> Bool {
+        return device != nil
     }
 
     /// Toggle the flashlight between on and off

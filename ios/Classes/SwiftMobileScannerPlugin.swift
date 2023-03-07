@@ -77,6 +77,8 @@ public class SwiftMobileScannerPlugin: NSObject, FlutterPlugin {
             start(call, result)
         case "stop":
             stop(result)
+        case "isStarted":
+            isStarted(result)
         case "torch":
             toggleTorch(call, result)
         case "analyzeImage":
@@ -148,6 +150,11 @@ public class SwiftMobileScannerPlugin: NSObject, FlutterPlugin {
         } catch {
         }
         result(nil)
+    }
+
+    /// checks if mobile scanner is running
+    private func isStarted(_ result: @escaping FlutterResult) {
+        result(mobileScanner.isStarted())
     }
 
     /// Toggles the torch
