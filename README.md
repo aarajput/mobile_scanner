@@ -5,7 +5,8 @@
 [![mobile_scanner](https://github.com/juliansteenbakker/mobile_scanner/actions/workflows/flutter.yml/badge.svg)](https://github.com/juliansteenbakker/mobile_scanner/actions/workflows/flutter.yml)
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/juliansteenbakker?label=like%20my%20work?%20sponsor%20me!)](https://github.com/sponsors/juliansteenbakker)
 
-An universal barcode and QR code scanner for Flutter based on MLKit. Uses CameraX on Android, AVFoundation on iOS and Apple Vision & AVFoundation on macOS. 
+A universal scanner for Flutter based on MLKit. Uses CameraX on Android and AVFoundation on iOS. 
+
 
 ## Features Supported
 
@@ -53,13 +54,19 @@ Ensure that you granted camera permission in XCode -> Signing & Capabilities:
 
 <img width="696" alt="Screenshot of XCode where Camera is checked" src="https://user-images.githubusercontent.com/24459435/193464115-d76f81d0-6355-4cb2-8bee-538e413a3ad0.png">
 
+## Web
+This package uses ZXing on web to read barcodes so it needs to be included in `index.html` as script.
+```html
+<script src="https://unpkg.com/@zxing/library@0.19.1" type="application/javascript"></script>
+```
+
 ## Usage
 
 Import `package:mobile_scanner/mobile_scanner.dart`, and use the widget with or without the controller.
 
 If you don't provide a controller, you can't control functions like the torch(flash) or switching camera.
 
-If you don't set allowDuplicates to false, you can get multiple scans in a very short time, causing things like pop() to fire lots of times.
+If you don't set `detectionSpeed` to `DetectionSpeed.noDuplicates`, you can get multiple scans in a very short time, causing things like pop() to fire lots of times.
 
 Example without controller:
 
@@ -96,7 +103,9 @@ import 'package:mobile_scanner/mobile_scanner.dart';
       body: MobileScanner(
         // fit: BoxFit.contain,
         controller: MobileScannerController(
-          facing: CameraFacing.front, torchEnabled: true,
+          detectionSpeed: DetectionSpeed.normal,
+          facing: CameraFacing.front,
+          torchEnabled: true,
         ),
         onDetect: (capture) {
           final List<Barcode> barcodes = capture.barcodes;

@@ -1,6 +1,8 @@
 package dev.steenbakker.mobile_scanner
 
 import android.app.Activity
+import android.graphics.Bitmap
+import android.graphics.Matrix
 import android.graphics.Rect
 import android.net.Uri
 import android.os.Handler
@@ -16,8 +18,11 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import dev.steenbakker.mobile_scanner.objects.DetectionSpeed
 import dev.steenbakker.mobile_scanner.objects.MobileScannerStartParameters
+import dev.steenbakker.mobile_scanner.utils.YuvToRgbConverter
 import io.flutter.view.TextureRegistry
+import java.io.ByteArrayOutputStream
 import kotlin.math.roundToInt
+
 
 class MobileScanner(
     private val activity: Activity,
@@ -82,12 +87,37 @@ class MobileScanner(
                     }
                 }
 
-                mobileScannerCallback(
-                    barcodeMap,
-                    if (returnImage) mediaImage.toByteArray() else null,
-                    inputImage.height,
-                    inputImage.width
-                )
+                if (returnImage) {
+
+                    val bitmap = Bitmap.createBitmap(mediaImage.width, mediaImage.height, Bitmap.Config.ARGB_8888)
+
+                    val imageFormat = YuvToRgbConverter(activity.applicationContext)
+
+                    imageFormat.yuvToRgb(mediaImage, bitmap)
+
+                    val bmResult = rotateBitmap(bitmap, camera?.cameraInfo?.sensorRotationDegrees?.toFloat() ?: 90f)
+
+                    val stream = ByteArrayOutputStream()
+                    bmResult.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                    val byteArray = stream.toByteArray()
+                    bmResult.recycle()
+
+
+                    mobileScannerCallback(
+                        barcodeMap,
+                        byteArray,
+                        bmResult.width,
+                        bmResult.height
+                    )
+
+                } else {
+                    mobileScannerCallback(
+                        barcodeMap,
+                        null,
+                        inputImage.height,
+                        inputImage.width
+                    )
+                }
             }
             .addOnFailureListener { e ->
                 mobileScannerErrorCallback(
@@ -103,6 +133,13 @@ class MobileScanner(
             }, detectionTimeout)
         }
     }
+
+    fun rotateBitmap(bitmap: Bitmap, degrees: Float): Bitmap {
+        val matrix = Matrix()
+        matrix.postRotate(degrees)
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+    }
+
 
     // scales the scanWindow to the provided inputImage and checks if that scaled
     // scanWindow contains the barcode
@@ -136,6 +173,7 @@ class MobileScanner(
         torch: Boolean,
         detectionSpeed: DetectionSpeed,
         torchStateCallback: TorchStateCallback,
+        zoomScaleStateCallback: ZoomScaleStateCallback,
         mobileScannerStartedCallback: MobileScannerStartedCallback,
         detectionTimeout: Long
     ) {
@@ -197,6 +235,11 @@ class MobileScanner(
             camera!!.cameraInfo.torchState.observe(activity) { state ->
                 // TorchState.OFF = 0; TorchState.ON = 1
                 torchStateCallback(state)
+            }
+
+            // Register the zoom scale listener
+            camera!!.cameraInfo.zoomState.observe(activity) { state ->
+                zoomScaleStateCallback(state.linearZoom.toDouble())
             }
 
 
@@ -283,6 +326,14 @@ class MobileScanner(
         if (camera == null) throw ZoomWhenStopped()
         if (scale > 1.0 || scale < 0) throw ZoomNotInRange()
         camera!!.cameraControl.setLinearZoom(scale.toFloat())
+    }
+
+    /**
+     * Reset the zoom rate of the camera.
+     */
+    fun resetScale() {
+        if (camera == null) throw ZoomWhenStopped()
+        camera!!.cameraControl.setZoomRatio(1f)
     }
 
 }

@@ -20,8 +20,10 @@ class MobileScannerController {
     this.torchEnabled = false,
     this.formats,
     this.returnImage = false,
-    @Deprecated('Instead, use the result of calling `start()` to determine if permissions were granted.')
-        this.onPermissionSet,
+    @Deprecated(
+      'Instead, use the result of calling `start()` to determine if permissions were granted.',
+    )
+    this.onPermissionSet,
     this.autoStart = true,
   });
 
@@ -88,6 +90,9 @@ class MobileScannerController {
   late final ValueNotifier<CameraFacing> cameraFacingState =
       ValueNotifier(facing);
 
+  /// A notifier that provides zoomScale.
+  final ValueNotifier<double> zoomScaleState = ValueNotifier(0.0);
+
   bool isStarting = false;
 
   /// A notifier that provides availability of the Torch (Flash)
@@ -133,7 +138,7 @@ class MobileScannerController {
         arguments['formats'] = formats!.map((e) => e.index).toList();
       }
     }
-    arguments['returnImage'] = true;
+    arguments['returnImage'] = returnImage;
     return arguments;
   }
 
@@ -153,12 +158,11 @@ class MobileScannerController {
       return null;
     }
 
-    isStarting = true;
-
-    events?.cancel();
-    events = _eventChannel
+    events ??= _eventChannel
         .receiveBroadcastStream()
         .listen((data) => _handleEvent(data as Map));
+
+    isStarting = true;
 
     // Check authorization status
     if (!kIsWeb) {
@@ -206,9 +210,21 @@ class MobileScannerController {
     } on PlatformException catch (error) {
       MobileScannerErrorCode errorCode = MobileScannerErrorCode.genericError;
 
-      if (error.code == "MobileScannerWeb") {
-        errorCode = MobileScannerErrorCode.permissionDenied;
+      final String? errorMessage = error.message;
+
+      if (kIsWeb) {
+        if (errorMessage == null) {
+          errorCode = MobileScannerErrorCode.genericError;
+        } else if (errorMessage.contains('NotFoundError') ||
+            errorMessage.contains('NotSupportedError')) {
+          errorCode = MobileScannerErrorCode.unsupported;
+        } else if (errorMessage.contains('NotAllowedError')) {
+          errorCode = MobileScannerErrorCode.permissionDenied;
+        } else {
+          errorCode = MobileScannerErrorCode.genericError;
+        }
       }
+
       isStarting = false;
 
       throw MobileScannerException(
@@ -307,6 +323,10 @@ class MobileScannerController {
   ///
   /// [path] The path of the image on the devices
   Future<bool> analyzeImage(String path) async {
+    events ??= _eventChannel
+        .receiveBroadcastStream()
+        .listen((data) => _handleEvent(data as Map));
+
     return _methodChannel
         .invokeMethod<bool>('analyzeImage', path)
         .then<bool>((bool? value) => value ?? false);
@@ -328,6 +348,11 @@ class MobileScannerController {
     await _methodChannel.invokeMethod('setScale', zoomScale);
   }
 
+  /// Reset the zoomScale of the camera to use standard scale 1x.
+  Future<void> resetZoomScale() async {
+    await _methodChannel.invokeMethod('resetScale');
+  }
+
   /// Disposes the MobileScannerController and closes all listeners.
   ///
   /// If you call this, you cannot use this controller object anymore.
@@ -346,6 +371,9 @@ class MobileScannerController {
         final state = TorchState.values[data as int? ?? 0];
         torchState.value = state;
         break;
+      case 'zoomScaleState':
+        zoomScaleState.value = data as double? ?? 0.0;
+        break;
       case 'barcode':
         if (data == null) return;
         final parsed = (data as List)
@@ -353,6 +381,7 @@ class MobileScannerController {
             .toList();
         _barcodesController.add(
           BarcodeCapture(
+            raw: data,
             barcodes: parsed,
             image: event['image'] as Uint8List?,
             width: event['width'] as double?,
@@ -363,6 +392,7 @@ class MobileScannerController {
       case 'barcodeMac':
         _barcodesController.add(
           BarcodeCapture(
+            raw: data,
             barcodes: [
               Barcode(
                 rawValue: (data as Map)['payload'] as String?,
@@ -375,12 +405,17 @@ class MobileScannerController {
         final barcode = data as Map?;
         _barcodesController.add(
           BarcodeCapture(
+            raw: data,
             barcodes: [
               if (barcode != null)
                 Barcode(
                   rawValue: barcode['rawValue'] as String?,
                   rawBytes: barcode['rawBytes'] as Uint8List?,
                   format: toFormat(barcode['format'] as int),
+                  corners: toCorners(
+                    (barcode['corners'] as List<Object?>? ?? [])
+                        .cast<Map<Object?, Object?>>(),
+                  ),
                 ),
             ],
           ),
