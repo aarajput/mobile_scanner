@@ -328,9 +328,9 @@ class _MobileScannerState extends State<MobileScanner>
                       child: CornersPaint(
                         barcodeCapture: _controller.barcodes,
                         barcodeRect: widget.barcodeRect,
-                        previewSize: value.size,
+                        previewSize: size,
                         child: Texture(
-                          textureId: value.textureId!,
+                          textureId: textureId!,
                         ),
                       ),
                     );
