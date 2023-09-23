@@ -204,6 +204,10 @@ class MobileScanner(
 
             // Preview
             val surfaceProvider = Preview.SurfaceProvider { request ->
+                if (isStopped()) {
+                    return@SurfaceProvider
+                }
+
                 val texture = textureEntry!!.surfaceTexture()
                 texture.setDefaultBufferSize(
                     request.resolution.width,
@@ -271,7 +275,7 @@ class MobileScanner(
      * Stop barcode scanning.
      */
     fun stop() {
-        if (camera == null && preview == null) {
+        if (isStopped()) {
             throw AlreadyStopped()
         }
 
@@ -285,6 +289,8 @@ class MobileScanner(
         textureEntry = null
         cameraProvider = null
     }
+
+    private fun isStopped() = camera == null && preview == null
 
     /**
      * Toggles the flash light on or off.

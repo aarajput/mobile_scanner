@@ -160,15 +160,13 @@ class _MobileScannerState extends State<MobileScanner>
           _startScanner();
         }
         break;
-      case AppLifecycleState.inactive:
-        break;
       case AppLifecycleState.paused:
         _controller.isStarted().then((isStarted) {
           _resumeFromBackground = isStarted;
         });
         _controller.stop();
         break;
-      case AppLifecycleState.detached:
+      default:
         break;
     }
   }
@@ -246,7 +244,7 @@ class _MobileScannerState extends State<MobileScanner>
 
   @override
   Widget build(BuildContext context) {
-    final Size size = MediaQuery.sizeOf(context);
+    final Size size = MediaQuery.of(context).size;
 
     return ValueListenableBuilder<MobileScannerArguments?>(
       valueListenable: _controller.startArguments,
@@ -270,7 +268,7 @@ class _MobileScannerState extends State<MobileScanner>
             alignment: Alignment.center,
             children: [
               _scanner(value.size, value.webId, value.textureId),
-              widget.overlay!
+              widget.overlay!,
             ],
           );
         } else {
