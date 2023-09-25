@@ -32,16 +32,12 @@ class _CornersPaintState extends State<CornersPaint> {
             widget.barcodeRect == null) {
           return widget.child;
         }
-        final selectedBarcodes =
-            widget.barcodeRect!.selectedBarcodes?.call(barcodeCapture.barcodes);
         final barcodeRects = barcodeCapture.barcodes
             .where((bc) => bc.rawValue != null && bc.corners != null)
             .map(
               (bc) => _BarcodeRect(
                 barcode: bc,
-                color: selectedBarcodes?.contains(bc) == true
-                    ? widget.barcodeRect!.selectedRectColor ?? Colors.green
-                    : Colors.red,
+                color: widget.barcodeRect!.getBarcodeColor?.call(bc),
                 corners: bc.corners!.map((corner) {
                   final widthFactor =
                       widget.previewSize.width / barcodeCapture.width!;
@@ -144,9 +140,12 @@ class CornersPainter extends CustomPainter {
     final strokeWidth = size.width / 200;
     for (int i = 0; i < barcodeRects.length; i++) {
       final barcodeRect = barcodeRects[i];
+      if (barcodeRect.color == null) {
+        continue;
+      }
       final corners = barcodeRect.corners;
       final paint = Paint()
-        ..color = barcodeRect.color
+        ..color = barcodeRect.color!
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth;
       final path = Path()
@@ -172,7 +171,7 @@ class CornersPainter extends CustomPainter {
 }
 
 class _BarcodeRect {
-  final Color color;
+  final Color? color;
   final Barcode barcode;
   final List<Offset> corners;
 

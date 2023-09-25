@@ -3,15 +3,11 @@ import 'dart:ui';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 class BarcodeRect {
-  final List<Barcode> Function(List<Barcode>)? selectedBarcodes;
-  final Color? selectedRectColor;
-  final Color? rectColor;
+  final Color? Function(Barcode)? getBarcodeColor;
   final void Function(Barcode)? onRectTap;
 
   BarcodeRect({
-    this.selectedBarcodes,
-    this.selectedRectColor,
-    this.rectColor,
+    this.getBarcodeColor,
     this.onRectTap,
   });
 }
