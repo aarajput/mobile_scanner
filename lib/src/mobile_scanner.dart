@@ -125,6 +125,7 @@ class _MobileScannerState extends State<MobileScanner>
       await Future.delayed(const Duration(seconds: 1, milliseconds: 500));
     }
     try {
+      _startException = null;
       final arguments = await _controller.start();
       widget.onScannerStarted?.call(arguments);
     } catch (error) {
@@ -292,48 +293,43 @@ class _MobileScannerState extends State<MobileScanner>
                 child: kIsWeb
                     ? HtmlElementView(viewType: webId!)
                     : StreamBuilder<NativeDeviceOrientation>(
-                  stream: NativeDeviceOrientationCommunicator()
-                      .onOrientationChanged(),
-                  builder: (_, snapshot) {
-                    final orientation = snapshot.data;
-                    if (orientation == null) {
-                      return const ColoredBox(
-                        color: Colors.black,
-                      );
-                    }
-                    return Transform.rotate(
-                      angle: () {
-                        switch (orientation) {
-                          case NativeDeviceOrientation
-                              .portraitUp:
-                            return 0;
-                          case NativeDeviceOrientation
-                              .portraitDown:
-                            return 180;
-                          case NativeDeviceOrientation
-                              .landscapeLeft:
-                            return -90;
-                          case NativeDeviceOrientation
-                              .landscapeRight:
-                            return 90;
-                          case NativeDeviceOrientation
-                              .unknown:
-                            return 0;
-                        }
-                      }() *
-                          math.pi /
-                          180,
-                      child: CornersPaint(
-                        barcodeCapture: _controller.barcodes,
-                        barcodeRect: widget.barcodeRect,
-                        previewSize: size,
-                        child: Texture(
-                          textureId: textureId!,
-                        ),
+                        stream: NativeDeviceOrientationCommunicator()
+                            .onOrientationChanged(),
+                        builder: (_, snapshot) {
+                          final orientation = snapshot.data;
+                          if (orientation == null) {
+                            return const ColoredBox(
+                              color: Colors.black,
+                            );
+                          }
+                          return Transform.rotate(
+                            angle: () {
+                                  switch (orientation) {
+                                    case NativeDeviceOrientation.portraitUp:
+                                      return 0;
+                                    case NativeDeviceOrientation.portraitDown:
+                                      return 180;
+                                    case NativeDeviceOrientation.landscapeLeft:
+                                      return -90;
+                                    case NativeDeviceOrientation.landscapeRight:
+                                      return 90;
+                                    case NativeDeviceOrientation.unknown:
+                                      return 0;
+                                  }
+                                }() *
+                                math.pi /
+                                180,
+                            child: CornersPaint(
+                              barcodeCapture: _controller.barcodes,
+                              barcodeRect: widget.barcodeRect,
+                              previewSize: size,
+                              child: Texture(
+                                textureId: textureId!,
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
               ),
             ),
           );

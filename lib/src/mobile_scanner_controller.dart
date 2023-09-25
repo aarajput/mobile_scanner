@@ -305,6 +305,27 @@ class MobileScannerController {
     await _methodChannel.invokeMethod('torch', torchState.value.index);
   }
 
+  /// Switches the torch on.
+  ///
+  /// Does nothing if the device has no torch.
+  ///
+  /// Throws if the controller was not initialized.
+  Future<void> enableTorch() async {
+    final hasTorch = hasTorchState.value;
+
+    if (hasTorch == null) {
+      throw const MobileScannerException(
+        errorCode: MobileScannerErrorCode.controllerUninitialized,
+      );
+    } else if (!hasTorch) {
+      return;
+    }
+
+    torchState.value = TorchState.on;
+
+    await _methodChannel.invokeMethod('torch', torchState.value.index);
+  }
+
   /// Changes the state of the camera (front or back).
   ///
   /// Does nothing if the device has no front camera.
