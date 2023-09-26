@@ -129,11 +129,28 @@ class _MobileScannerState extends State<MobileScanner>
       final arguments = await _controller.start();
       widget.onScannerStarted?.call(arguments);
     } catch (error) {
-      debugPrint('mobile_scanner: $error');
-      if (mounted) {
-        setState(() {
-          _startException = error as MobileScannerException;
-        });
+      final exception = error as MobileScannerException;
+      void showException() {
+        debugPrint('mobile_scanner: $error');
+        if (mounted) {
+          setState(() {
+            _startException = exception;
+          });
+        }
+      }
+
+      if (exception.errorDetails?.message ==
+          'Called start() while already started') {
+        try {
+          await Future.delayed(const Duration(milliseconds: 1000));
+          await _controller.stop();
+          final arguments = await _controller.start();
+          widget.onScannerStarted?.call(arguments);
+        } catch (e) {
+          showException();
+        }
+      } else {
+        showException();
       }
     }
   }
