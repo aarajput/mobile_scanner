@@ -128,9 +128,6 @@ class _MobileScannerState extends State<MobileScanner>
 
   /// Start the given [scanner].
   Future<void> _startScanner() async {
-    if (widget.startDelay) {
-      await Future.delayed(const Duration(seconds: 1, milliseconds: 500));
-    }
     try {
       _startException = null;
       final arguments = await _controller.start();
