@@ -25,6 +25,7 @@ class MobileScannerController {
     this.onPermissionSet,
     this.autoStart = true,
     this.cameraResolution,
+    this.useNewCameraSelector = false,
   });
 
   /// Select which camera should be used.
@@ -75,6 +76,12 @@ class MobileScannerController {
   ///
   /// Currently only supported on Android.
   final Size? cameraResolution;
+
+  /// Use the new resolution selector. Warning: not fully tested, may produce
+  /// unwanted/zoomed images.
+  ///
+  /// Only supported on Android
+  final bool useNewCameraSelector;
 
   /// Sets the barcode stream
   final StreamController<BarcodeCapture> _barcodesController =
@@ -138,6 +145,7 @@ class MobileScannerController {
     arguments['speed'] = detectionSpeed.rawValue;
     arguments['timeout'] = detectionTimeoutMs;
     arguments['returnImage'] = returnImage;
+    arguments['useNewCameraSelector'] = useNewCameraSelector;
 
     /*    if (scanWindow != null) {
       arguments['scanWindow'] = [
@@ -306,6 +314,7 @@ class MobileScannerController {
 
     isStarting = false;
     return startArguments.value = MobileScannerArguments(
+      numberOfCameras: startResult['numberOfCameras'] as int?,
       size: size,
       hasTorch: hasTorch,
       textureId: kIsWeb ? null : startResult['textureId'] as int?,
