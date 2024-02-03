@@ -1,3 +1,8 @@
+## 4.0.0
+BREAKING CHANGES:
+* [Android] compileSdk has been upgraded to version 34.
+* [Android] Java version has been upgraded to version 17.
+
 ## 3.5.7
 Improvements:
 * Updated js dependency together with other dependencies.
@@ -55,6 +60,9 @@ Bugs fixed:
 * Fixed messages not being sent on the main thread for Android, iOS and MacOS. (thanks @navaronbracke !)
 
 ## 3.5.0
+
+**NOTE: From this version onwards, `mobile_scanner` requires Android projects to have a `compileSdk` of 34 (Android 14) or higher**
+
 New Features:
 * Added the option to switch between bundled and unbundled MLKit for Android. (thanks @woolfred !)
 * Added the option to specify the camera resolution for Android. (thanks @EArminjon !)

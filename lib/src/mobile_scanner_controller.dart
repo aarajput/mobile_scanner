@@ -249,7 +249,6 @@ class MobileScannerController {
             );
           }
 
-          break;
         case MobileScannerState.authorized:
           break;
       }
@@ -459,10 +458,8 @@ class MobileScannerController {
       case 'torchState':
         final state = TorchState.values[data as int? ?? 0];
         torchState.value = state;
-        break;
       case 'zoomScaleState':
         zoomScaleState.value = data as double? ?? 0.0;
-        break;
       case 'barcode':
         if (data == null) return;
         final parsed = (data as List)
@@ -477,7 +474,6 @@ class MobileScannerController {
             height: event['height'] as double?,
           ),
         );
-        break;
       case 'barcodeMac':
         _barcodesController.add(
           BarcodeCapture(
@@ -492,7 +488,6 @@ class MobileScannerController {
             ],
           ),
         );
-        break;
       case 'barcodeWeb':
         final barcode = data as Map?;
         final corners = barcode?['corners'] as List<Object?>? ?? <Object?>[];
@@ -519,7 +514,6 @@ class MobileScannerController {
             ],
           ),
         );
-        break;
       case 'error':
         throw MobileScannerException(
           errorCode: MobileScannerErrorCode.genericError,
