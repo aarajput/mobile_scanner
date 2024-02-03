@@ -1,13 +1,20 @@
 import 'dart:async';
 import 'dart:io';
-
 // ignore: unnecessary_import
 import 'dart:typed_data';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:mobile_scanner/src/enums/barcode_format.dart';
+import 'package:mobile_scanner/src/enums/camera_facing.dart';
+import 'package:mobile_scanner/src/enums/detection_speed.dart';
+import 'package:mobile_scanner/src/enums/mobile_scanner_error_code.dart';
+import 'package:mobile_scanner/src/enums/mobile_scanner_state.dart';
+import 'package:mobile_scanner/src/enums/torch_state.dart';
+import 'package:mobile_scanner/src/mobile_scanner_exception.dart';
+import 'package:mobile_scanner/src/objects/barcode.dart';
+import 'package:mobile_scanner/src/objects/barcode_capture.dart';
+import 'package:mobile_scanner/src/objects/mobile_scanner_arguments.dart';
 
 /// The [MobileScannerController] holds all the logic of this plugin,
 /// where as the [MobileScanner] class is the frontend of this plugin.
@@ -447,6 +454,7 @@ class MobileScannerController {
   void _handleEvent(Map event) {
     final name = event['name'];
     final data = event['data'];
+
     switch (name) {
       case 'torchState':
         final state = TorchState.values[data as int? ?? 0];
