@@ -1,14 +1,27 @@
 package dev.steenbakker.mobile_scanner
 
 import android.app.Activity
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.graphics.Rect
+import android.hardware.display.DisplayManager
 import android.net.Uri
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.util.Size
 import android.view.Surface
-import androidx.camera.core.*
+import android.view.WindowManager
+import androidx.camera.core.Camera
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.AspectRatioStrategy
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
@@ -22,11 +35,7 @@ import dev.steenbakker.mobile_scanner.utils.YuvToRgbConverter
 import io.flutter.view.TextureRegistry
 import java.io.ByteArrayOutputStream
 import kotlin.math.roundToInt
-import android.util.Size
-import android.hardware.display.DisplayManager
-import android.view.WindowManager
-import android.content.Context
-import android.os.Build
+
 
 class MobileScanner(
     private val activity: Activity,
@@ -212,7 +221,8 @@ class MobileScanner(
         mobileScannerStartedCallback: MobileScannerStartedCallback,
         mobileScannerErrorCallback: (exception: Exception) -> Unit,
         detectionTimeout: Long,
-        cameraResolution: Size?
+        cameraResolution: Size?,
+        newCameraResolutionSelector: Boolean
     ) {
         this.detectionSpeed = detectionSpeed
         this.detectionTimeout = detectionTimeout
@@ -236,6 +246,7 @@ class MobileScanner(
 
         cameraProviderFuture.addListener({
             cameraProvider = cameraProviderFuture.get()
+            val numberOfCameras = cameraProvider?.availableCameraInfos?.size
 
             if (cameraProvider == null) {
                 mobileScannerErrorCallback(CameraError())
@@ -272,9 +283,19 @@ class MobileScanner(
             val displayManager = activity.applicationContext.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
 
             if (cameraResolution != null) {
-                // TODO: migrate to ResolutionSelector with ResolutionStrategy when upgrading to camera 1.3.0
-                // Override initial resolution
-                analysisBuilder.setTargetResolution(getResolution(cameraResolution))
+                if (newCameraResolutionSelector) {
+                    val selectorBuilder = ResolutionSelector.Builder()
+                    selectorBuilder.setResolutionStrategy(
+                        ResolutionStrategy(
+                            cameraResolution,
+                            ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
+                        )
+                    )
+                    analysisBuilder.setResolutionSelector(selectorBuilder.build()).build()
+                } else {
+                    @Suppress("DEPRECATION")
+                    analysisBuilder.setTargetResolution(getResolution(cameraResolution))
+                }
 
                 if (displayListener == null) {
                     displayListener = object : DisplayManager.DisplayListener {
@@ -283,7 +304,19 @@ class MobileScanner(
                         override fun onDisplayRemoved(displayId: Int) {}
 
                         override fun onDisplayChanged(displayId: Int) {
-                            analysisBuilder.setTargetResolution(getResolution(cameraResolution))
+                            if (newCameraResolutionSelector) {
+                                val selectorBuilder = ResolutionSelector.Builder()
+                                selectorBuilder.setResolutionStrategy(
+                                    ResolutionStrategy(
+                                        cameraResolution,
+                                        ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
+                                    )
+                                )
+                                analysisBuilder.setResolutionSelector(selectorBuilder.build()).build()
+                            } else {
+                                @Suppress("DEPRECATION")
+                                analysisBuilder.setTargetResolution(getResolution(cameraResolution))
+                            }
                         }
                     }
 
@@ -336,7 +369,8 @@ class MobileScanner(
                     if (portrait) width else height,
                     if (portrait) height else width,
                     camera?.cameraInfo?.hasFlashUnit() ?: false,
-                    textureEntry!!.id()
+                    textureEntry!!.id(),
+                    numberOfCameras ?: 0
                 )
             )
         }, executor)

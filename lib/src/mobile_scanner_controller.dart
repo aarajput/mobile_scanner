@@ -1,13 +1,20 @@
 import 'dart:async';
 import 'dart:io';
-
 // ignore: unnecessary_import
 import 'dart:typed_data';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:mobile_scanner/src/enums/barcode_format.dart';
+import 'package:mobile_scanner/src/enums/camera_facing.dart';
+import 'package:mobile_scanner/src/enums/detection_speed.dart';
+import 'package:mobile_scanner/src/enums/mobile_scanner_error_code.dart';
+import 'package:mobile_scanner/src/enums/mobile_scanner_state.dart';
+import 'package:mobile_scanner/src/enums/torch_state.dart';
+import 'package:mobile_scanner/src/mobile_scanner_exception.dart';
+import 'package:mobile_scanner/src/objects/barcode.dart';
+import 'package:mobile_scanner/src/objects/barcode_capture.dart';
+import 'package:mobile_scanner/src/objects/mobile_scanner_arguments.dart';
 
 /// The [MobileScannerController] holds all the logic of this plugin,
 /// where as the [MobileScanner] class is the frontend of this plugin.
@@ -25,6 +32,7 @@ class MobileScannerController {
     this.onPermissionSet,
     this.autoStart = true,
     this.cameraResolution,
+    this.useNewCameraSelector = false,
   });
 
   /// Select which camera should be used.
@@ -75,6 +83,12 @@ class MobileScannerController {
   ///
   /// Currently only supported on Android.
   final Size? cameraResolution;
+
+  /// Use the new resolution selector. Warning: not fully tested, may produce
+  /// unwanted/zoomed images.
+  ///
+  /// Only supported on Android
+  final bool useNewCameraSelector;
 
   /// Sets the barcode stream
   final StreamController<BarcodeCapture> _barcodesController =
@@ -138,6 +152,7 @@ class MobileScannerController {
     arguments['speed'] = detectionSpeed.rawValue;
     arguments['timeout'] = detectionTimeoutMs;
     arguments['returnImage'] = returnImage;
+    arguments['useNewCameraSelector'] = useNewCameraSelector;
 
     /*    if (scanWindow != null) {
       arguments['scanWindow'] = [
@@ -234,7 +249,6 @@ class MobileScannerController {
             );
           }
 
-          break;
         case MobileScannerState.authorized:
           break;
       }
@@ -306,6 +320,7 @@ class MobileScannerController {
 
     isStarting = false;
     return startArguments.value = MobileScannerArguments(
+      numberOfCameras: startResult['numberOfCameras'] as int?,
       size: size,
       hasTorch: hasTorch,
       textureId: kIsWeb ? null : startResult['textureId'] as int?,
@@ -438,14 +453,13 @@ class MobileScannerController {
   void _handleEvent(Map event) {
     final name = event['name'];
     final data = event['data'];
+
     switch (name) {
       case 'torchState':
         final state = TorchState.values[data as int? ?? 0];
         torchState.value = state;
-        break;
       case 'zoomScaleState':
         zoomScaleState.value = data as double? ?? 0.0;
-        break;
       case 'barcode':
         if (data == null) return;
         final parsed = (data as List)
@@ -460,7 +474,6 @@ class MobileScannerController {
             height: event['height'] as double?,
           ),
         );
-        break;
       case 'barcodeMac':
         _barcodesController.add(
           BarcodeCapture(
@@ -475,7 +488,6 @@ class MobileScannerController {
             ],
           ),
         );
-        break;
       case 'barcodeWeb':
         final barcode = data as Map?;
         final corners = barcode?['corners'] as List<Object?>? ?? <Object?>[];
@@ -502,7 +514,6 @@ class MobileScannerController {
             ],
           ),
         );
-        break;
       case 'error':
         throw MobileScannerException(
           errorCode: MobileScannerErrorCode.genericError,

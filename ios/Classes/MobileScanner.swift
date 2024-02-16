@@ -56,9 +56,9 @@ public class MobileScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelega
     var standardZoomFactor: CGFloat = 1
 
     private var nextScanTime = 0.0
-
+    
     private var imagesCurrentlyBeingProcessed = false
-
+    
     public var timeoutSeconds: Double = 0
 
     init(registry: FlutterTextureRegistry?, mobileScannerCallback: @escaping MobileScannerCallback, torchModeChangeCallback: @escaping TorchModeChangeCallback, zoomScaleChangeCallback: @escaping ZoomScaleChangeCallback) {
@@ -67,6 +67,43 @@ public class MobileScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelega
         self.torchModeChangeCallback = torchModeChangeCallback
         self.zoomScaleChangeCallback = zoomScaleChangeCallback
         super.init()
+    }
+
+    /// Get the default camera device for the given `position`.
+    ///
+    /// This function selects the most appropriate camera, when it is available.
+    private func getDefaultCameraDevice(position: AVCaptureDevice.Position) -> AVCaptureDevice? {
+        if #available(iOS 13.0, *) {
+            // Find the built-in Triple Camera, if it exists.
+            if let device = AVCaptureDevice.default(.builtInTripleCamera,
+                                                    for: .video,
+                                                    position: position) {
+                return device
+            }
+
+            // Find the built-in Dual-Wide Camera, if it exists.
+            if let device = AVCaptureDevice.default(.builtInDualWideCamera,
+                                                    for: .video,
+                                                    position: position) {
+                return device
+            }
+        }
+
+        // Find the built-in Dual Camera, if it exists.
+        if let device = AVCaptureDevice.default(.builtInDualCamera,
+                                                for: .video,
+                                                position: position) {
+            return device
+        }
+
+        // Find the built-in Wide-Angle Camera, if it exists.
+        if let device = AVCaptureDevice.default(.builtInWideAngleCamera,
+                                                for: .video,
+                                                position: position) {
+            return device
+        }
+
+        return nil
     }
 
     /// Check if we already have camera permission.
@@ -95,15 +132,15 @@ public class MobileScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelega
         }
         latestBuffer = imageBuffer
         registry?.textureFrameAvailable(textureId)
-
+        
         let currentTime = Date().timeIntervalSince1970
         let eligibleForScan = currentTime > nextScanTime && !imagesCurrentlyBeingProcessed
-
+        
         if ((detectionSpeed == DetectionSpeed.normal || detectionSpeed == DetectionSpeed.noDuplicates) && eligibleForScan || detectionSpeed == DetectionSpeed.unrestricted) {
 
             nextScanTime = currentTime + timeoutSeconds
             imagesCurrentlyBeingProcessed = true
-
+            
             let ciImage = latestBuffer.image
 
             let image = VisionImage(image: ciImage)
@@ -115,12 +152,12 @@ public class MobileScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelega
 
             scanner.process(image) { [self] barcodes, error in
                 imagesCurrentlyBeingProcessed = false
-
+                
                 if (detectionSpeed == DetectionSpeed.noDuplicates) {
                     let newScannedBarcodes = barcodes?.compactMap({ barcode in
                         return barcode.rawValue
                     }).sorted()
-
+                    
                     if (error == nil && barcodesString != nil && newScannedBarcodes != nil && barcodesString!.elementsEqual(newScannedBarcodes!)) {
                         return
                     } else if (newScannedBarcodes?.isEmpty == false) {
@@ -146,11 +183,7 @@ public class MobileScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelega
         textureId = registry?.register(self)
 
         // Open the camera device
-        if #available(iOS 13.0, *) {
-            device = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInTripleCamera, .builtInDualWideCamera, .builtInDualCamera, .builtInWideAngleCamera], mediaType: .video, position: cameraPosition).devices.first
-        } else {
-            device = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInWideAngleCamera], mediaType: .video, position: cameraPosition).devices.first
-        }
+        device = getDefaultCameraDevice(position: cameraPosition)
 
         if (device == nil) {
             throw MobileScannerError.noCamera
@@ -216,29 +249,38 @@ public class MobileScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelega
         backgroundQueue.async {
             self.captureSession.startRunning()
 
-            // Turn on the flashlight if requested,
-            // but after the capture session started.
+            // After the capture session started, turn on the torch (if requested)
+            // and reset the zoom scale back to the default.
+            // Ensure that these adjustments are done on the main DispatchQueue,
+            // as they interact with the hardware camera.
             if (torch) {
+                DispatchQueue.main.async {
+                    do {
+                        try self.toggleTorch(.on)
+                    } catch {
+                        // If the torch does not turn on,
+                        // continue with the capture session anyway.
+                    }
+                }
+            }
+
+            DispatchQueue.main.async {
                 do {
-                    try self.toggleTorch(.on)
+                    try self.resetScale()
                 } catch {
-                    // If the torch does not turn on,
+                    // If the zoom scale could not be reset,
                     // continue with the capture session anyway.
                 }
             }
 
-            do {
-                try self.resetScale()
-            } catch {
-                // If the zoom scale could not be reset,
-                // continue with the capture session anyway.
-            }
-
             if let device = self.device {
+                // When querying the dimensions of the camera,
+                // stay on the background thread,
+                // as this does not change the configuration of the hardware camera.
                 let dimensions = CMVideoFormatDescriptionGetDimensions(
                     device.activeFormat.formatDescription)
                 let hasTorch = device.hasTorch
-
+                
                 completion(
                     MobileScannerStartParameters(
                         width: Double(dimensions.height),
@@ -247,10 +289,10 @@ public class MobileScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelega
                         textureId: self.textureId ?? 0
                     )
                 )
-
+                
                 return
             }
-
+            
             completion(MobileScannerStartParameters())
         }
     }
@@ -281,9 +323,15 @@ public class MobileScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelega
         return device != nil
     }
 
-    /// Toggle the flashlight between on and off.
+    /// Set the torch mode.
+    ///
+    /// This method should be called on the main DispatchQueue.
     func toggleTorch(_ torch: AVCaptureDevice.TorchMode) throws {
-        if (device == nil || !device.hasTorch || !device.isTorchAvailable) {
+        guard let device = self.device else {
+            return
+        }
+
+        if (!device.hasTorch || !device.isTorchAvailable || !device.isTorchModeSupported(torch)) {
             return
         }
 

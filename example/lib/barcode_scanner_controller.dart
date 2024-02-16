@@ -17,7 +17,7 @@ class _BarcodeScannerWithControllerState
   BarcodeCapture? barcode;
 
   final MobileScannerController controller = MobileScannerController(
-    torchEnabled: true,
+    torchEnabled: true, useNewCameraSelector: true,
     // formats: [BarcodeFormat.qrCode]
     // facing: CameraFacing.front,
     // detectionSpeed: DetectionSpeed.normal
@@ -47,6 +47,8 @@ class _BarcodeScannerWithControllerState
     }
   }
 
+  int? numberOfCameras;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -57,6 +59,12 @@ class _BarcodeScannerWithControllerState
           return Stack(
             children: [
               MobileScanner(
+                onScannerStarted: (arguments) {
+                  if (mounted && arguments?.numberOfCameras != null) {
+                    numberOfCameras = arguments!.numberOfCameras;
+                    setState(() {});
+                  }
+                },
                 controller: controller,
                 errorBuilder: (context, error, child) {
                   return ScannerErrorWidget(error: error);
@@ -146,7 +154,9 @@ class _BarcodeScannerWithControllerState
                           },
                         ),
                         iconSize: 32.0,
-                        onPressed: () => controller.switchCamera(),
+                        onPressed: (numberOfCameras ?? 0) < 2
+                            ? null
+                            : () => controller.switchCamera(),
                       ),
                       IconButton(
                         color: Colors.white,

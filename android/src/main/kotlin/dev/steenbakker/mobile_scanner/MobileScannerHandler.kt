@@ -140,6 +140,7 @@ class MobileScannerHandler(
         val speed: Int = call.argument<Int>("speed") ?: 1
         val timeout: Int = call.argument<Int>("timeout") ?: 250
         val cameraResolutionValues: List<Int>? = call.argument<List<Int>>("cameraResolution")
+        val useNewCameraSelector: Boolean = call.argument<Boolean>("useNewCameraSelector") ?: false
         val cameraResolution: Size? = if (cameraResolutionValues != null) {
             Size(cameraResolutionValues[0], cameraResolutionValues[1])
         } else {
@@ -181,7 +182,8 @@ class MobileScannerHandler(
                     result.success(mapOf(
                         "textureId" to it.id,
                         "size" to mapOf("width" to it.width, "height" to it.height),
-                        "torchable" to it.hasFlashUnit
+                        "torchable" to it.hasFlashUnit,
+                        "numberOfCameras" to it.numberOfCameras
                     ))
                 }
             },
@@ -221,6 +223,7 @@ class MobileScannerHandler(
             },
             timeout.toLong(),
             cameraResolution,
+            useNewCameraSelector
         )
     }
 
