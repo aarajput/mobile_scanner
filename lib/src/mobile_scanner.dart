@@ -4,14 +4,9 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:mobile_scanner/src/enums/mobile_scanner_error_code.dart';
-import 'package:mobile_scanner/src/mobile_scanner_controller.dart';
-import 'package:mobile_scanner/src/mobile_scanner_exception.dart';
-import 'package:mobile_scanner/src/objects/barcode_capture.dart';
-import 'package:mobile_scanner/src/objects/mobile_scanner_arguments.dart';
-import 'package:mobile_scanner/src/scan_window_calculation.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:mobile_scanner/src/corners/corners_paint.dart';
+import 'package:mobile_scanner/src/scan_window_calculation.dart';
 import 'package:native_device_orientation/native_device_orientation.dart';
 
 /// The function signature for the error builder.
@@ -268,11 +263,6 @@ class _MobileScannerState extends State<MobileScanner>
                             .onOrientationChanged(),
                         builder: (_, snapshot) {
                           final orientation = snapshot.data;
-                          if (orientation == null) {
-                            return const ColoredBox(
-                              color: Colors.black,
-                            );
-                          }
                           return Transform.rotate(
                             angle: () {
                                   switch (orientation) {
@@ -285,6 +275,8 @@ class _MobileScannerState extends State<MobileScanner>
                                     case NativeDeviceOrientation.landscapeRight:
                                       return 90;
                                     case NativeDeviceOrientation.unknown:
+                                      return 0;
+                                    case null:
                                       return 0;
                                   }
                                 }() *
