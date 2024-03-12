@@ -2,6 +2,29 @@
 Bugs fixed:
 * [iOS] Fixed a crash with a nil capture session when starting the camera. (thanks @navaronbracke !)
 
+## 1.0.0 (2024-03-12)
+
+
+### Features
+
+* add available camera information in startcallback on android ([133f5c2](https://github.com/aarajput/mobile_scanner/commit/133f5c23d95ca5b3759f59a5e0eaf50ac61a7395))
+* add new resolution selector with parameter for android ([240a374](https://github.com/aarajput/mobile_scanner/commit/240a374851034ff00e4702a1795ce48dc20efd20))
+
+
+### Bug Fixes
+
+* Adapt app lifecycle states. In Android would the permission pop up again after denying in the first time. ([d9481f0](https://github.com/aarajput/mobile_scanner/commit/d9481f004c155cdbc8a755725793af5ff4e71115))
+* Add back LayoutBuilder to calculate the correct widgetSize ([b24afed](https://github.com/aarajput/mobile_scanner/commit/b24afed7b7e1300825b8342aec533af71dea3608))
+* Change Kotlin version from 1.9.10 to 1.7.22 to fix Android builds ([dd51070](https://github.com/aarajput/mobile_scanner/commit/dd51070f2103139eacff0eec1473b4e8ac2bfad8))
+* iOS Orientation change from .left to .up ([cb7313b](https://github.com/aarajput/mobile_scanner/commit/cb7313bd552383e54b7cccf8b738f8bb5967a2d6))
+* Null exception when getting activity display on Android API &gt;= 30 ([e404a51](https://github.com/aarajput/mobile_scanner/commit/e404a51ab5d017cdbe15c3f822955b1e02f46b82))
+* remove duplicate library ([a59b2b6](https://github.com/aarajput/mobile_scanner/commit/a59b2b61b1a581a13f02bd185ac9b564439b73df))
+* return type 'int' doesn't allow null for zxingBarcodeFormat method ([528feb6](https://github.com/aarajput/mobile_scanner/commit/528feb659b4385bce2c7e5db9898e84ba7923240))
+* **ScanImage:** crash when try to rotate image ([99bd7bd](https://github.com/aarajput/mobile_scanner/commit/99bd7bd73ec9f6e85dd4d8fbc76a025c92664f3d))
+* spamming code detection with "noDuplicates" detection speed on iOS. ([4ab43db](https://github.com/aarajput/mobile_scanner/commit/4ab43db1ee602252b4a03fd6f060c06ac42bd89e))
+* typo in zxing.dart ([17d3aed](https://github.com/aarajput/mobile_scanner/commit/17d3aed1b793d5628ffba9fd07337d6e2f25990b))
+* with the "noDuplicates" detection speed, the same code is no longer detected after stopping and restarting the scanner. ([4ab43db](https://github.com/aarajput/mobile_scanner/commit/4ab43db1ee602252b4a03fd6f060c06ac42bd89e))
+
 ## 4.0.0
 BREAKING CHANGES:
 * [Android] compileSdk has been upgraded to version 34.
